@@ -52,7 +52,7 @@ let currentAgent: GUIAgent<any> | null = null;
 
 function createMainWindow(): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  
+
   const win = new BrowserWindow({
     width: Math.min(1200, width),
     height: Math.min(800, height),
@@ -111,7 +111,7 @@ function registerIpcHandlers(): void {
   // Run agent
   ipcMain.handle('runAgent', async () => {
     if (appState.thinking) return;
-    
+
     appState.thinking = true;
     appState.abortController = new AbortController();
     appState.errorMsg = null;
@@ -193,6 +193,9 @@ async function runAgent(): Promise<void> {
   if (!instructions) throw new Error('Instructions are required');
 
   logger.info('[runAgent] Starting with:', instructions);
+
+  // Destroy previous instance to ensure fresh browser/page
+  await DefaultBrowserOperator.destroyInstance();
 
   // Create browser operator
   const operator = await DefaultBrowserOperator.getInstance(

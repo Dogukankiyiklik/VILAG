@@ -7,6 +7,7 @@
     "author": "VILAG Team",
     "scripts": {
         "bootstrap": "pnpm i",
+        "postinstall": "playwright install",
         "dev": "pnpm --filter vilag-desktop dev",
         "build": "turbo run build",
         "typecheck": "turbo run typecheck",

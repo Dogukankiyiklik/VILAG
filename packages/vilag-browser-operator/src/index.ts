@@ -39,7 +39,7 @@ export class BrowserOperator implements Operator {
   private context: BrowserContext | null = null;
   private currentPage: Page | null = null;
 
-  constructor(private options: BrowserOperatorOptions = {}) {}
+  constructor(private options: BrowserOperatorOptions = {}) { }
 
   /**
    * Launch browser if not already running, return active page.
@@ -57,7 +57,7 @@ export class BrowserOperator implements Operator {
 
       // Navigate to search engine or start URL
       const startUrl = this.options.startUrl || this.getSearchEngineUrl();
-      await this.currentPage.goto(startUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+      await this.currentPage.goto(startUrl, { waitUntil: 'domcontentloaded' }).catch(() => { });
     }
 
     // Get the most recent page
@@ -108,6 +108,9 @@ export class BrowserOperator implements Operator {
     const { action_type, action_inputs } = parsedPrediction;
 
     const page = await this.getActivePage();
+    if (!page) {
+      throw new Error('No active page found to execute action');
+    }
 
     // Resolve coordinates from model space to screen space
     const resolveCoords = (input: any): { x: number; y: number } => {
@@ -190,12 +193,12 @@ export class BrowserOperator implements Operator {
           await page.goto(url.startsWith('http') ? url : `https://${url}`, {
             waitUntil: 'domcontentloaded',
             timeout: 15000,
-          }).catch(() => {});
+          }).catch(() => { });
         }
         break;
       }
       case 'navigate_back': {
-        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
+        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => { });
         break;
       }
       case 'drag': {
@@ -259,7 +262,7 @@ export class BrowserOperator implements Operator {
 
   private async waitForPageSettle(page: Page): Promise<void> {
     try {
-      await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
+      await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => { });
       await sleep(300);
     } catch {
       // Ignore settlement errors
@@ -271,7 +274,7 @@ export class BrowserOperator implements Operator {
    */
   async cleanup(): Promise<void> {
     if (this.browser) {
-      await this.browser.close().catch(() => {});
+      await this.browser.close().catch(() => { });
       this.browser = null;
       this.context = null;
       this.currentPage = null;
