@@ -9,6 +9,7 @@ export interface Logger {
   info(...args: any[]): void;
   warn(...args: any[]): void;
   error(...args: any[]): void;
+  log(...args: any[]): void;
 }
 
 const COLORS: Record<LogLevel, string> = {
@@ -34,6 +35,7 @@ export function createLogger(prefix: string = 'VILAG'): Logger {
     info: (...args) => log('info', ...args),
     warn: (...args) => log('warn', ...args),
     error: (...args) => log('error', ...args),
+    log: (...args) => log('info', ...args),
   };
 }
 

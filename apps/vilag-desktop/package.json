@@ -2,7 +2,7 @@
     "name": "vilag-desktop",
     "version": "0.0.1",
     "private": true,
-    "main": "./dist/main/main.js",
+    "main": "./out/main/main.js",
     "description": "VILAG Desktop - Browser-focused GUI Agent",
     "author": "VILAG Team",
     "scripts": {

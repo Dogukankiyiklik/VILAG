@@ -25,7 +25,7 @@ interface AppState {
     vlmApiKey: string;
     vlmModelName: string;
     maxLoopCount: number;
-    language: 'en' | 'zh';
+    language: 'en' | 'tr';
     searchEngine: string;
   };
 }
@@ -59,6 +59,8 @@ function createMainWindow(): BrowserWindow {
     minWidth: 800,
     minHeight: 600,
     title: 'VILAG - GUI Agent',
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
@@ -166,6 +168,23 @@ function registerIpcHandlers(): void {
     appState.instructions = '';
     broadcastState();
   });
+
+  // Window controls
+  ipcMain.on('window:minimize', () => {
+    mainWindow?.minimize();
+  });
+
+  ipcMain.on('window:maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow?.unmaximize();
+    } else {
+      mainWindow?.maximize();
+    }
+  });
+
+  ipcMain.on('window:close', () => {
+    mainWindow?.close();
+  });
 }
 
 // ===== Agent Runner =====
@@ -220,7 +239,7 @@ async function runAgent(): Promise<void> {
   currentAgent = null;
 }
 
-function buildSystemPrompt(language: 'en' | 'zh'): string {
+function buildSystemPrompt(language: 'en' | 'tr'): string {
   return `You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.
 
 ## Output Format
@@ -245,7 +264,7 @@ finished()
 call_user() # Call the user when the task is unsolvable.
 
 ## Note
-- Use ${language === 'zh' ? 'Chinese' : 'English'} in \`Thought\` part.
+- Use ${language === 'tr' ? 'Turkish' : 'English'} in \`Thought\` part.
 - Write a small plan and finally summarize your next action in one sentence in \`Thought\` part.
 
 ## User Instruction
