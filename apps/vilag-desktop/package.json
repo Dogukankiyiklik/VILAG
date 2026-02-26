@@ -1,0 +1,46 @@
+{
+    "name": "vilag-desktop",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./dist/main/main.js",
+    "description": "VILAG Desktop - Browser-focused GUI Agent",
+    "author": "VILAG Team",
+    "scripts": {
+        "dev": "electron-vite dev",
+        "build": "npm run clean && cross-env NODE_ENV=production electron-vite build",
+        "build:dist": "cross-env NODE_ENV=production electron-vite build",
+        "start": "electron-vite preview",
+        "clean": "rimraf dist out",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
+    },
+    "dependencies": {
+        "@vilag/sdk": "workspace:*",
+        "@vilag/shared": "workspace:*",
+        "@vilag/action-parser": "workspace:*",
+        "@vilag/browser-operator": "workspace:*",
+        "@vilag/electron-ipc": "workspace:*",
+        "@vilag/logger": "workspace:*"
+    },
+    "devDependencies": {
+        "@electron-toolkit/preload": "^3.0.1",
+        "@electron-toolkit/tsconfig": "^1.0.1",
+        "@electron-toolkit/utils": "^3.0.0",
+        "@vitejs/plugin-react": "^4.3.4",
+        "cross-env": "^7.0.3",
+        "electron": "34.1.1",
+        "electron-vite": "^3.0.0",
+        "eslint": "^8.57.0",
+        "prettier": "^3.3.2",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.7.2",
+        "vite": "^6.1.0",
+        "@types/react": "^18.3.3",
+        "@types/react-dom": "^18.3.0",
+        "lucide-react": "^0.460.0"
+    },
+    "engines": {
+        "node": ">=20.x"
+    }
+}

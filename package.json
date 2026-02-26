@@ -1,0 +1,29 @@
+{
+    "name": "vilag-monorepo",
+    "version": "0.0.1",
+    "private": true,
+    "packageManager": "pnpm@9.10.0",
+    "description": "VILAG - Browser-focused GUI Agent for controlling web applications using natural language",
+    "author": "VILAG Team",
+    "scripts": {
+        "bootstrap": "pnpm i",
+        "dev": "pnpm --filter vilag-desktop dev",
+        "build": "turbo run build",
+        "typecheck": "turbo run typecheck",
+        "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+        "format": "prettier --write .",
+        "clean": "turbo run clean"
+    },
+    "devDependencies": {
+        "turbo": "^2.4.4",
+        "@types/node": "^20.14.8",
+        "cross-env": "^7.0.3",
+        "eslint": "^8.57.0",
+        "prettier": "^3.3.2",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.7.2"
+    },
+    "engines": {
+        "node": ">=20.x"
+    }
+}

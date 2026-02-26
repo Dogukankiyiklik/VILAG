@@ -1,0 +1,30 @@
+{
+    "name": "@vilag/electron-ipc",
+    "version": "0.0.1",
+    "description": "Electron IPC utilities for VILAG",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "import": "./src/index.ts",
+            "types": "./src/index.ts"
+        },
+        "./main": {
+            "import": "./src/main.ts",
+            "types": "./src/main.ts"
+        },
+        "./renderer": {
+            "import": "./src/renderer.ts",
+            "types": "./src/renderer.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit"
+    },
+    "license": "Apache-2.0",
+    "devDependencies": {
+        "typescript": "^5.7.2",
+        "electron": "34.1.1"
+    }
+}
