@@ -14,6 +14,9 @@
             ],
             "@renderer/*": [
                 "./src/renderer/src/*"
+            ],
+            "@vilag/desktop-operator": [
+                "../../packages/vilag-desktop-operator/src/index.ts"
             ]
         }
     },
