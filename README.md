@@ -17,9 +17,9 @@ Proje, pnpm kullanarak monorepo yapisi ile organize edilmistir. Projeyi calistir
    ```
    Bu komut, hem uygulamayi derler hem de Electron masaustu penceresini baslatir.
 
-3. Uretim (production) derlemesi almak icin:
+3. LM Studio'dan gerekli modeli yükleyin ve ayarlardan modelin tam ismini gerekli kutucuğa yazın
    ```bash
-   pnpm --filter vilag-desktop run build
+   ui-tars-2b-sft
    ```
 
 ## Proje Yapisi
