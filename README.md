@@ -31,3 +31,51 @@ Proje, pnpm kullanarak monorepo yapisi ile organize edilmistir. Projeyi calistir
 - packages/vilag-electron-ipc: Electron surecleri arasindaki iletisimi saglar.
 - packages/vilag-logger: Sistem loglama araci.
 - packages/vilag-shared: Moduller arasi paylasilan tipler ve sabitler.
+
+
+## Düzeltilecekler
+- Arayüz kötü bir durumda. Eklenebilecekler:
+   - Kapatma, aşağı alma ve tam ekran yapma tuşları
+   - Ajan aksiyona geçerken sağ tarafta ufak bir pencre geliyor, ui-tars mantığı, ama bu pencerede modelin çıktıları, düşünceleri gösterilmiyor.
+   - Alınan ekran görüntüleri chat kısmında sağ tarafta gösterilmeli. 
+- Desktop yapısı var ama tam çalışmıyor. Ui-tars'ınki incelenip ona göre tekrar düzenlenmeli.
+
+## Eklenmesi Planlananlar
+- RAG yapısına bazı senaryoları koyup modelin eğitimsiz başarısı artırılmaya çalışılmalı.
+- Planner yapısı bizim asıl katkımız olmalı. Bir planlayıcı eklemeliyiz, nasıl yapılacağı ui-tars'ın README'sinde yazıyor:
+   ```bash
+   Planning: You can combine planning/reasoning models (such as OpenAI-o1, DeepSeek-R1) to implement complex GUIAgent logic for planning, reasoning, and execution:
+
+   const guiAgent = new GUIAgent({
+   // ... other config
+   });
+
+   const planningList = await reasoningModel.invoke({
+   conversations: [
+      {
+         role: 'user',
+         content: 'buy a ticket from beijing to shanghai',
+      }
+   ]
+   })
+   /**
+   * [
+   *  'open chrome',
+   *  'open trip.com',
+   *  'click "search" button',
+   *  'select "beijing" in "from" input',
+   *  'select "shanghai" in "to" input',
+   *  'click "search" button',
+   * ]
+   */
+
+   for (const planning of planningList) {
+   await guiAgent.run(planning);
+   }
+   ```
+
+- HITL yapısı eklenmeli, kritik yerlerde kullanıcıya sormalı.
+- Teasm özelinde veri toplanıyor, ekstra fine-tune edilip RAG yapısı işe yaramazsa kullanılabilir.
+- 7B, 2B'ye göre orijinal Ui-tars'da daha iyi çalışıyordu. ancak VILAG'da desktop bozuk olduğu için deneyemedim. Onun yerine tarayıcıda oturum açılabilir veya tarayıcı ilk açıldığında teams sayfasını açtırabiliriz. Çünkü onu açmaya çalışırken de biraz zorlanıyor. Yani amacımız Teasm sayfasını direkt ajana vermek olmalı.
+
+- Planlama için Kılavuza bakılabilir.
