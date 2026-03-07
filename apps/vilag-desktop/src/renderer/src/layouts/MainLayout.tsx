@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, Settings, Sun, Moon } from 'lucide-react';
+import { MessageSquare, Settings, Sun, Moon, Minus, Square, X } from 'lucide-react';
 
 import {
   SidebarProvider,
@@ -13,6 +13,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@renderer/components/ui/sidebar';
+
+declare global {
+  interface Window {
+    vilagAPI: {
+      minimize: () => void;
+      maximize: () => void;
+      close: () => void;
+      [key: string]: unknown;
+    };
+  }
+}
 
 export function MainLayout() {
   const navigate = useNavigate();
@@ -44,7 +55,37 @@ export function MainLayout() {
   };
 
   return (
-    <SidebarProvider className="flex h-screen w-full bg-background text-foreground">
+    <>
+      <div
+        className="fixed top-0 left-0 right-0 z-50 h-8 flex items-center justify-between px-3 bg-background border-b border-border"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        <span className="text-xs font-semibold tracking-widest text-foreground select-none">VILAG</span>
+        <div
+          className="flex items-center gap-1"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <button
+            onClick={() => window.vilagAPI.minimize()}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-muted transition-colors"
+          >
+            <Minus className="h-3 w-3" />
+          </button>
+          <button
+            onClick={() => window.vilagAPI.maximize()}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-muted transition-colors"
+          >
+            <Square className="h-3 w-3" />
+          </button>
+          <button
+            onClick={() => window.vilagAPI.close()}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-red-500 hover:text-white transition-colors"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      <SidebarProvider className="flex h-screen w-full bg-background text-foreground pt-8">
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-2">
@@ -104,6 +145,7 @@ export function MainLayout() {
         </main>
       </SidebarInset>
     </SidebarProvider>
+    </>
   );
 }
 
