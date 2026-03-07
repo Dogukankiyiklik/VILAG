@@ -7,3 +7,4 @@ out/
 .env.local
 ui-tars-yapı/
 logs/
+.vilag_browser_profile/

@@ -9,13 +9,17 @@ import { StatusEnum } from '@vilag/shared/types';
 import { sleep } from '@vilag/shared/utils';
 import type { Operator, ExecuteParams, ExecuteOutput, ScreenshotOutput } from '@vilag/sdk/core';
 
-export type SearchEngine = 'google' | 'bing' | 'baidu';
+import * as path from 'path';
+
+export type SearchEngine = 'google';
 
 export interface BrowserOperatorOptions {
   headless?: boolean;
   searchEngine?: SearchEngine;
   startUrl?: string;
   highlightElements?: boolean;
+  usePersistentProfile?: boolean;
+  profileDir?: string;
 }
 
 export class BrowserOperator implements Operator {
@@ -46,15 +50,32 @@ export class BrowserOperator implements Operator {
    * Launch browser if not already running, return active page.
    */
   async getActivePage(): Promise<Page> {
-    if (!this.browser) {
-      this.browser = await chromium.launch({
-        headless: this.options.headless ?? false,
-        args: ['--disable-blink-features=AutomationControlled'],
-      });
-      this.context = await this.browser.newContext({
-        viewport: { width: 1280, height: 720 },
-      });
-      this.currentPage = await this.context.newPage();
+    if (!this.context) {
+      if (this.options.usePersistentProfile && this.options.profileDir) {
+        // Use persistent context (saves cookies, local storage, logins)
+        const absoluteProfileDir = path.resolve(process.cwd(), this.options.profileDir);
+        this.context = await chromium.launchPersistentContext(absoluteProfileDir, {
+          headless: this.options.headless ?? false,
+          args: ['--disable-blink-features=AutomationControlled'],
+          viewport: { width: 1280, height: 720 },
+        });
+
+        // LaunchPersistentContext directly gives us a context and a default page
+        const pages = this.context.pages();
+        this.currentPage = pages.length > 0 ? pages[0] : await this.context.newPage();
+      } else {
+        // Fallback to classic incognito/clean session
+        if (!this.browser) {
+          this.browser = await chromium.launch({
+            headless: this.options.headless ?? false,
+            args: ['--disable-blink-features=AutomationControlled'],
+          });
+        }
+        this.context = await this.browser.newContext({
+          viewport: { width: 1280, height: 720 },
+        });
+        this.currentPage = await this.context.newPage();
+      }
 
       // Navigate to search engine or start URL
       const startUrl = this.options.startUrl || this.getSearchEngineUrl();
@@ -77,11 +98,7 @@ export class BrowserOperator implements Operator {
   }
 
   private getSearchEngineUrl(): string {
-    switch (this.options.searchEngine) {
-      case 'bing': return 'https://www.bing.com';
-      case 'baidu': return 'https://www.baidu.com';
-      default: return 'https://www.google.com';
-    }
+    return 'https://www.google.com';
   }
 
   /**
@@ -412,14 +429,26 @@ export class DefaultBrowserOperator extends BrowserOperator {
 
   static async getInstance(
     searchEngine: SearchEngine = 'google',
+    // ⬇️ DEĞİŞİKLİK 1: Ajanın DİREKT olarak hangi siteye gideceğini buraya yazabilirsiniz.
+    // Örnek: startUrl: string = 'https://teams.microsoft.com/v2/',
     startUrl?: string,
+
+    // ⬇️ DEĞİŞİKLİK 2: Oturum çerezini (Giriş bilgilerini) saklamak için burayı 'true' yapın.
+    // Örnek: usePersistentProfile: boolean = true,
+    usePersistentProfile: boolean = true,
+
+    // ⬇️ DEĞİŞİKLİK 3: Çerezlerin kaydedileceği klasörün ismini buraya yazın.
+    // Örnek: profileDir: string = '.benim_oturumlarim'
+    profileDir: string = '.vilag_browser_profile'
   ): Promise<DefaultBrowserOperator> {
     if (!DefaultBrowserOperator.instance) {
       DefaultBrowserOperator.instance = new DefaultBrowserOperator({
         headless: false,
         searchEngine,
-        startUrl,
+        startUrl, // If undefined, getActivePage() falls back to Google
         highlightElements: true,
+        usePersistentProfile,
+        profileDir,
       });
     }
     return DefaultBrowserOperator.instance;
