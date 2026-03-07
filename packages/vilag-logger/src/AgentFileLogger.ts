@@ -19,19 +19,25 @@ export interface TraceRecord {
 export class AgentFileLogger {
     private logFilePath: string;
     private isEnabled: boolean;
+    private records: TraceRecord[] = [];
 
     constructor(options: { logDir?: string; enabled?: boolean } = {}) {
         this.isEnabled = options.enabled !== false;
 
-        // Default to project root/logs/traces
-        const logDir = options.logDir || path.join(process.cwd(), 'logs', 'traces');
+        // In a monorepo, process.cwd() might be 'apps/desktop'. 
+        // We want to write to the project root 'VILAG/logs/traces'.
+        const rootDir = process.cwd().includes('apps')
+            ? path.join(process.cwd(), '..', '..')
+            : process.cwd();
+
+        const logDir = options.logDir || path.join(rootDir, 'logs', 'traces');
 
         if (this.isEnabled && !fs.existsSync(logDir)) {
             fs.mkdirSync(logDir, { recursive: true });
         }
 
         const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        this.logFilePath = path.join(logDir, `trace_${dateStr}.jsonl`);
+        this.logFilePath = path.join(logDir, `trace_${dateStr}.json`);
 
         if (this.isEnabled) {
             this.writeSystemRecord('session_start', { logFilePath: this.logFilePath });
@@ -67,6 +73,8 @@ export class AgentFileLogger {
             loopCount: cleanConversations.length,
             status: event.status,
             data: {
+                instruction: event.instruction,
+                messages: event.messages,
                 conversations: cleanConversations,
                 costTime: event.costTime,
                 costTokens: event.costTokens,
@@ -88,9 +96,12 @@ export class AgentFileLogger {
         });
     }
 
-    private appendToFile(record: any) {
+    private appendToFile(record: TraceRecord) {
         try {
-            fs.appendFileSync(this.logFilePath, JSON.stringify(record) + '\n', 'utf8');
+            // Accumulate records in memory
+            this.records.push(record);
+            // Write the entire array nicely formatted
+            fs.writeFileSync(this.logFilePath, JSON.stringify(this.records, null, 2), 'utf8');
         } catch (err) {
             console.error('[AgentFileLogger] Failed to write to trace file:', err);
         }

@@ -57,6 +57,8 @@ export interface Message {
 // ===== GUIAgent Data =====
 export interface GUIAgentData {
   status: StatusEnum;
+  instruction?: string;
+  messages?: Message[];
   conversations: Conversation[];
   sessionId?: string;
   costTime?: number;

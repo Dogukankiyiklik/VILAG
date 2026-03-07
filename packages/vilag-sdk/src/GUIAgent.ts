@@ -66,13 +66,13 @@ export class GUIAgent<T extends Operator> {
       // Check abort signal
       if (signal?.aborted || this.isStopped) {
         this.logger.info('[GUIAgent] Agent stopped');
-        this.emitData(StatusEnum.END, conversations);
+        this.emitData(StatusEnum.END, conversations, instruction, messages);
         break;
       }
 
       // Handle pause
       while (this.isPaused && !this.isStopped) {
-        this.emitData(StatusEnum.PAUSE, conversations);
+        this.emitData(StatusEnum.PAUSE, conversations, instruction, messages);
         await sleep(500);
       }
       if (this.isStopped) break;
@@ -90,7 +90,7 @@ export class GUIAgent<T extends Operator> {
           screenshotErrorCount++;
           this.logger.error('[GUIAgent] Screenshot error:', e);
           if (screenshotErrorCount >= MAX_SCREENSHOT_ERROR_COUNT) {
-            this.emitError(ErrorStatusEnum.SCREENSHOT_ERROR, e as Error, conversations);
+            this.emitError(ErrorStatusEnum.SCREENSHOT_ERROR, e as Error, conversations, instruction, messages);
             break;
           }
           await sleep(1000);
@@ -102,7 +102,7 @@ export class GUIAgent<T extends Operator> {
         const screenHeight = Math.round(1080 * scaleFactor);
 
         // === Step 2: Call Model ===
-        this.emitData(StatusEnum.RUNNING, conversations);
+        this.emitData(StatusEnum.RUNNING, conversations, instruction, messages);
 
         let invokeOutput;
         try {
@@ -142,7 +142,7 @@ export class GUIAgent<T extends Operator> {
             }
           }
           if (!retried) {
-            this.emitError(ErrorStatusEnum.MODEL_SERVICE_ERROR, e as Error, conversations);
+            this.emitError(ErrorStatusEnum.MODEL_SERVICE_ERROR, e as Error, conversations, instruction, messages);
             break;
           }
         }
@@ -182,13 +182,13 @@ export class GUIAgent<T extends Operator> {
           // Check for terminal actions
           if (parsed.action_type === 'finished') {
             this.logger.info('[GUIAgent] Task finished');
-            this.emitData(StatusEnum.END, conversations);
+            this.emitData(StatusEnum.END, conversations, instruction, messages);
             return;
           }
 
           if (parsed.action_type === 'call_user') {
             this.logger.info('[GUIAgent] Calling user for help');
-            this.emitData(StatusEnum.CALL_USER, conversations);
+            this.emitData(StatusEnum.CALL_USER, conversations, instruction, messages);
             return;
           }
 
@@ -214,7 +214,7 @@ export class GUIAgent<T extends Operator> {
           }
         }
 
-        this.emitData(StatusEnum.RUNNING, conversations);
+        this.emitData(StatusEnum.RUNNING, conversations, instruction, messages);
 
         // Wait interval between loops
         if (loopInterval > 0) {
@@ -226,14 +226,14 @@ export class GUIAgent<T extends Operator> {
 
       } catch (e) {
         this.logger.error('[GUIAgent] Unexpected error in loop:', e);
-        this.emitError(ErrorStatusEnum.UNKNOWN_ERROR, e as Error, conversations);
+        this.emitError(ErrorStatusEnum.UNKNOWN_ERROR, e as Error, conversations, instruction, messages);
         break;
       }
     }
 
     if (loopCount >= maxLoopCount) {
       this.logger.info('[GUIAgent] Max loop count reached');
-      this.emitData(StatusEnum.MAX_LOOP, conversations);
+      this.emitData(StatusEnum.MAX_LOOP, conversations, instruction, messages);
     }
   }
 
@@ -252,16 +252,18 @@ export class GUIAgent<T extends Operator> {
     this.logger.info('[GUIAgent] Stopped');
   }
 
-  private emitData(status: StatusEnum, conversations: Conversation[]): void {
+  private emitData(status: StatusEnum, conversations: Conversation[], instruction?: string, messages?: Message[]): void {
     const data: GUIAgentData = {
       status,
       conversations: [...conversations],
+      instruction,
+      messages,
       sessionId: this.sessionId,
     };
     this.config.onData?.({ data });
   }
 
-  private emitError(type: ErrorStatusEnum, error: Error, conversations: Conversation[]): void {
+  private emitError(type: ErrorStatusEnum, error: Error, conversations: Conversation[], instruction?: string, messages?: Message[]): void {
     const guiError: GUIAgentError = {
       status: type,
       message: error?.message || 'Unknown error',
@@ -270,6 +272,8 @@ export class GUIAgent<T extends Operator> {
     const data: GUIAgentData = {
       status: StatusEnum.ERROR,
       conversations: [...conversations],
+      instruction,
+      messages,
       sessionId: this.sessionId,
     };
     this.config.onError?.({ data, error: guiError });
