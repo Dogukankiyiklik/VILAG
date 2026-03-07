@@ -114,6 +114,8 @@ export class NutJSOperator extends Operator {
     return {
       base64: physicalScreenImage.toString('base64'),
       scaleFactor,
+      width,
+      height,
     };
   }
 
@@ -162,8 +164,8 @@ export class NutJSOperator extends Operator {
       const lowercaseKeyMap = Object.fromEntries(
         Object.entries(Key).map(([k, v]) => [k.toLowerCase(), v]),
       ) as {
-        [K in keyof typeof Key as Lowercase<K>]: (typeof Key)[K];
-      };
+          [K in keyof typeof Key as Lowercase<K>]: (typeof Key)[K];
+        };
 
       const keys = keyStr
         .split(/[\s+]/)

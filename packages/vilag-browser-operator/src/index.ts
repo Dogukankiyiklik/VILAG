@@ -229,10 +229,13 @@ export class BrowserOperator implements Operator {
 
     const base64 = buffer.toString('base64');
     const scaleFactor = await this.getDeviceScaleFactor();
+    const viewport = page.viewportSize();
 
     return {
       base64,
       scaleFactor,
+      width: viewport?.width || 1280,
+      height: viewport?.height || 720,
     };
   }
 
@@ -431,7 +434,7 @@ export class DefaultBrowserOperator extends BrowserOperator {
     searchEngine: SearchEngine = 'google',
     // ⬇️ DEĞİŞİKLİK 1: Ajanın DİREKT olarak hangi siteye gideceğini buraya yazabilirsiniz.
     // Örnek: startUrl: string = 'https://teams.microsoft.com/v2/',
-    startUrl?: string,
+    startUrl: string = 'https://teams.live.com/v2/',
 
     // ⬇️ DEĞİŞİKLİK 2: Oturum çerezini (Giriş bilgilerini) saklamak için burayı 'true' yapın.
     // Örnek: usePersistentProfile: boolean = true,

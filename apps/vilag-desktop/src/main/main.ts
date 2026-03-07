@@ -145,6 +145,7 @@ function registerIpcHandlers(): void {
     appState.thinking = true;
     appState.abortController = new AbortController();
     appState.errorMsg = null;
+    appState.messages = [];
     appState.status = StatusEnum.RUNNING;
     broadcastState();
 
@@ -270,7 +271,7 @@ async function runAgent(): Promise<void> {
           conversations.length,
         );
         appState.status = status;
-        appState.messages = [...appState.messages, ...conversations];
+        appState.messages = conversations;
         broadcastState();
       },
       onError: ({ error, data }) => {

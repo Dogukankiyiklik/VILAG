@@ -24,6 +24,8 @@ export enum ErrorStatusEnum {
 export interface ScreenshotResult {
   base64: string;
   scaleFactor: number;
+  width?: number;
+  height?: number;
 }
 
 export interface PredictionParsed {

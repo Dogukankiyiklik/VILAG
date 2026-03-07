@@ -11,6 +11,7 @@ import {
 import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Textarea } from '@renderer/components/ui/textarea';
+import ImageGallery from '@renderer/components/ImageGallery';
 
 declare global {
   interface Window {
@@ -195,9 +196,13 @@ export default function LocalPage() {
               <TabsTrigger value="raw">Raw Messages</TabsTrigger>
             </TabsList>
             <TabsContent value="screenshot" className="flex-1 mt-3">
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground border rounded-md">
-                Screenshot gallery will be implemented here.
-              </div>
+              {messages.length > 0 ? (
+                <ImageGallery messages={messages} />
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-muted-foreground border rounded-md">
+                  Waiting for screenshots...
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="raw" className="flex-1 mt-3">
               <ScrollArea className="h-full rounded-md border px-2 py-1">

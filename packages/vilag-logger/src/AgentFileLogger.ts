@@ -68,13 +68,34 @@ export class AgentFileLogger {
             screenshotBase64: conv.screenshotBase64 ? '[BASE64_IMAGE_OMITTED_FOR_TRACE]' : undefined
         }));
 
+        const cleanMessages = (event.messages || []).map(msg => {
+            if (Array.isArray(msg.content)) {
+                return {
+                    ...msg,
+                    content: msg.content.map((item: any) => {
+                        if (item.type === 'image_url' && item.image_url?.url) {
+                            return {
+                                ...item,
+                                image_url: {
+                                    ...item.image_url,
+                                    url: '[BASE64_IMAGE_OMITTED_FOR_TRACE]'
+                                }
+                            };
+                        }
+                        return item;
+                    })
+                };
+            }
+            return msg;
+        });
+
         const record: TraceRecord = {
             timestamp: new Date().toISOString(),
             loopCount: cleanConversations.length,
             status: event.status,
             data: {
                 instruction: event.instruction,
-                messages: event.messages,
+                messages: cleanMessages,
                 conversations: cleanConversations,
                 costTime: event.costTime,
                 costTokens: event.costTokens,

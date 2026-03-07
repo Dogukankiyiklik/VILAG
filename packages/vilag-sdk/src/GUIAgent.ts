@@ -97,9 +97,26 @@ export class GUIAgent<T extends Operator> {
           continue;
         }
 
-        const { base64, scaleFactor } = screenshotOutput;
-        const screenWidth = Math.round(1920 * scaleFactor); // Will be refined
-        const screenHeight = Math.round(1080 * scaleFactor);
+        const { base64, scaleFactor, width, height } = screenshotOutput;
+        const screenWidth = width ? Math.round(width * scaleFactor) : Math.round(1920 * scaleFactor);
+        const screenHeight = height ? Math.round(height * scaleFactor) : Math.round(1080 * scaleFactor);
+
+        // Add the screenshot as a user message
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${replaceBase64Prefix(base64)}`,
+              },
+            },
+            {
+              type: 'text',
+              text: 'What is the next action to perform?',
+            },
+          ],
+        });
 
         // === Step 2: Call Model ===
         this.emitData(StatusEnum.RUNNING, conversations, instruction, messages);
@@ -108,7 +125,7 @@ export class GUIAgent<T extends Operator> {
         try {
           invokeOutput = await this.model.invoke({
             conversations: messages,
-            images: [replaceBase64Prefix(base64)],
+            images: [],
             screenContext: {
               width: Math.round(screenWidth / scaleFactor),
               height: Math.round(screenHeight / scaleFactor),
@@ -127,7 +144,7 @@ export class GUIAgent<T extends Operator> {
               await sleep(1000 * (i + 1));
               invokeOutput = await this.model.invoke({
                 conversations: messages,
-                images: [replaceBase64Prefix(base64)],
+                images: [],
                 screenContext: {
                   width: Math.round(screenWidth / scaleFactor),
                   height: Math.round(screenHeight / scaleFactor),
