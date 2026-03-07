@@ -15,6 +15,7 @@ export interface BrowserOperatorOptions {
   headless?: boolean;
   searchEngine?: SearchEngine;
   startUrl?: string;
+  highlightElements?: boolean;
 }
 
 export class BrowserOperator implements Operator {
@@ -84,14 +85,132 @@ export class BrowserOperator implements Operator {
   }
 
   /**
+   * Inject baseline CSS for highlighting clickable elements
+   */
+  private async injectHighlightStyles(page: Page) {
+    await page.evaluate(() => {
+      const styleId = 'vilag-highlight-styles';
+      if (document.getElementById(styleId)) return;
+
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        .vilag-clickable-highlight {
+          outline: 3px solid rgba(0, 155, 255, 0.7) !important;
+          box-shadow: 0 0 0 3px rgba(0, 155, 255, 0.3) !important;
+          background-color: rgba(0, 155, 255, 0.05) !important;
+          transition: all 0.2s ease-in-out !important;
+          z-index: 999 !important;
+          position: relative !important;
+        }
+        .vilag-clickable-highlight.vilag-highlight-button {
+          outline: 3px solid rgba(255, 64, 129, 0.8) !important;
+          box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3) !important;
+          background-color: rgba(255, 64, 129, 0.05) !important;
+        }
+        .vilag-clickable-highlight.vilag-highlight-link {
+          outline: 3px solid rgba(124, 77, 255, 0.8) !important;
+          box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.3) !important;
+          background-color: rgba(124, 77, 255, 0.05) !important;
+        }
+        .vilag-clickable-highlight.vilag-highlight-input {
+          outline: 3px solid rgba(0, 230, 118, 0.8) !important;
+          box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.3) !important;
+          background-color: rgba(0, 230, 118, 0.05) !important;
+        }
+        .vilag-clickable-highlight.vilag-highlight-other {
+          outline: 3px solid rgba(255, 171, 0, 0.8) !important;
+          box-shadow: 0 0 0 3px rgba(255, 171, 0, 0.3) !important;
+          background-color: rgba(255, 171, 0, 0.05) !important;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+  }
+
+  /**
+   * Find and highlight all interactive elements on the page (SoM logic)
+   */
+  private async addClickableHighlights(page: Page) {
+    await this.injectHighlightStyles(page);
+    await page.evaluate(() => {
+      const highlightElements = (selectors: string[], typeClass: string) => {
+        const selector = selectors.join(', ');
+        const elements = Array.from(document.querySelectorAll(selector));
+
+        const visibleElements = elements.filter((el) => {
+          const rect = el.getBoundingClientRect();
+          const style = window.getComputedStyle(el);
+          const isVisible = rect.width > 0 && rect.height > 0 &&
+            style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+
+          let current = el as HTMLElement;
+          let hasPointerEvents = true;
+          while (current && current !== document.body) {
+            if (window.getComputedStyle(current).pointerEvents === 'none') {
+              hasPointerEvents = false;
+              break;
+            }
+            current = current.parentElement as HTMLElement;
+          }
+
+          const isDisabled = (el as HTMLElement).hasAttribute('disabled') ||
+            (el as HTMLElement).getAttribute('aria-disabled') === 'true';
+
+          return isVisible && hasPointerEvents && !isDisabled;
+        });
+
+        visibleElements.forEach((el) => {
+          el.classList.add('vilag-clickable-highlight');
+          el.classList.add(typeClass);
+        });
+      };
+
+      highlightElements(['button', '[role="button"]', '.btn', '.button', '[type="button"]', '[type="submit"]', '[type="reset"]'], 'vilag-highlight-button');
+      highlightElements(['a', '[role="link"]', '.nav-item'], 'vilag-highlight-link');
+      highlightElements(['input', 'select', 'textarea', '[role="checkbox"]', '[role="radio"]', '[role="textbox"]', '[contenteditable="true"]'], 'vilag-highlight-input');
+      highlightElements(['[role="tab"]', '[role="menuitem"]', '[role="option"]', '[onclick]', '[tabindex="0"]', 'summary', 'details'], 'vilag-highlight-other');
+    });
+  }
+
+  /**
+   * Remove highlighting from the page
+   */
+  private async removeClickableHighlights(page: Page) {
+    await page.evaluate(() => {
+      const highlightedElements = document.querySelectorAll('.vilag-clickable-highlight');
+      highlightedElements.forEach((el) => {
+        el.classList.remove('vilag-clickable-highlight');
+        el.classList.remove('vilag-highlight-button');
+        el.classList.remove('vilag-highlight-link');
+        el.classList.remove('vilag-highlight-input');
+        el.classList.remove('vilag-highlight-other');
+      });
+    });
+  }
+
+  /**
    * Take a screenshot of the current page.
    */
   async screenshot(): Promise<ScreenshotOutput> {
     const page = await this.getActivePage();
-    const buffer = await page.screenshot({ type: 'jpeg', quality: 75 });
-    const base64 = buffer.toString('base64');
+    const shouldHighlight = this.options.highlightElements !== false;
 
-    const viewport = page.viewportSize() || { width: 1280, height: 720 };
+    if (shouldHighlight) {
+      await this.addClickableHighlights(page);
+      await sleep(300); // Wait for styles to settle
+    }
+
+    let buffer;
+    try {
+      buffer = await page.screenshot({ type: 'jpeg', quality: 75 });
+    } finally {
+      if (shouldHighlight) {
+        await this.removeClickableHighlights(page);
+      }
+    }
+
+    const base64 = buffer.toString('base64');
     const scaleFactor = await this.getDeviceScaleFactor();
 
     return {
@@ -300,6 +419,7 @@ export class DefaultBrowserOperator extends BrowserOperator {
         headless: false,
         searchEngine,
         startUrl,
+        highlightElements: true,
       });
     }
     return DefaultBrowserOperator.instance;
