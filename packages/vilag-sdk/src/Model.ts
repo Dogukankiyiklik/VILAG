@@ -104,7 +104,10 @@ export class UITarsModel {
     );
 
     // Parse the prediction into structured actions
-    const parsedPredictions = parseAction(prediction);
+    const parsedPredictions = parseAction(prediction, {
+      screenContext,
+      modelVersion: uiTarsVersion,
+    });
 
     return {
       prediction,

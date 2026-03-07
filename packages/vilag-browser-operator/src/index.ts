@@ -112,13 +112,21 @@ export class BrowserOperator implements Operator {
       throw new Error('No active page found to execute action');
     }
 
-    // Resolve coordinates from model space to screen space
-    const resolveCoords = (input: any): { x: number; y: number } => {
+    // Resolve coordinates from model output to screen pixels.
+    // Prefers pre-computed start_coords from the parser (accounts for v1.5 smartResize).
+    // Falls back to manual factor-based scaling if coords aren't pre-computed.
+    const resolveCoords = (input: any, coordsKey: string = 'start_coords'): { x: number; y: number } => {
       if (!input) return { x: 0, y: 0 };
+
+      // Use pre-computed pixel coords from action parser (v1.5-aware)
+      if (input[coordsKey] && Array.isArray(input[coordsKey]) && input[coordsKey].length === 2) {
+        return { x: input[coordsKey][0], y: input[coordsKey][1] };
+      }
+
+      // Fallback: manual scaling (v1.0 compat)
       const raw = input.start_box || input.point || input.start_point || input;
       const x = typeof raw.x === 'number' ? raw.x : 0;
       const y = typeof raw.y === 'number' ? raw.y : 0;
-      // Scale from model coordinate space to viewport
       const viewport = page.viewportSize() || { width: 1280, height: 720 };
       return {
         x: Math.round((x / factors[0]) * viewport.width),
@@ -202,13 +210,8 @@ export class BrowserOperator implements Operator {
         break;
       }
       case 'drag': {
-        const startCoords = resolveCoords(action_inputs);
-        const endRaw = action_inputs.end_box || action_inputs.end_point || { x: 0, y: 0 };
-        const viewport = page.viewportSize() || { width: 1280, height: 720 };
-        const endCoords = {
-          x: Math.round((endRaw.x / factors[0]) * viewport.width),
-          y: Math.round((endRaw.y / factors[1]) * viewport.height),
-        };
+        const startCoords = resolveCoords(action_inputs, 'start_coords');
+        const endCoords = resolveCoords(action_inputs, 'end_coords');
         await page.mouse.move(startCoords.x, startCoords.y);
         await page.mouse.down();
         await page.mouse.move(endCoords.x, endCoords.y, { steps: 10 });
