@@ -40,3 +40,5 @@ export function createLogger(prefix: string = 'VILAG'): Logger {
 }
 
 export const logger = createLogger();
+
+export * from './AgentFileLogger';

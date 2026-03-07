@@ -6,7 +6,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { join } from 'path';
 import { GUIAgent } from '@vilag/sdk';
 import { DefaultBrowserOperator } from '@vilag/browser-operator';
-import { createLogger } from '@vilag/logger';
+import { createLogger, traceLogger } from '@vilag/logger';
 import { StatusEnum } from '@vilag/shared/types';
 import { NutJSElectronOperator } from './agent/operator';
 import {
@@ -238,8 +238,8 @@ async function runAgent(): Promise<void> {
     const operatorInstance =
       mode === 'browser'
         ? await DefaultBrowserOperator.getInstance(
-            settings.searchEngine as any,
-          )
+          settings.searchEngine as any,
+        )
         : new NutJSElectronOperator();
 
     // Build system prompt
@@ -259,6 +259,10 @@ async function runAgent(): Promise<void> {
       maxLoopCount: settings.maxLoopCount,
       onData: ({ data }) => {
         const { status, conversations } = data;
+
+        // Log to file trace
+        traceLogger.logAgentData(data);
+
         logger.info(
           '[onData] status:',
           status,
@@ -269,8 +273,15 @@ async function runAgent(): Promise<void> {
         appState.messages = [...appState.messages, ...conversations];
         broadcastState();
       },
-      onError: ({ error }) => {
+      onError: ({ error, data }) => {
         logger.error('[onError]', error);
+
+        // Log to file trace
+        traceLogger.logAgentData(data, {
+          message: error?.message,
+          stack: error?.stack,
+        });
+
         appState.status = StatusEnum.ERROR;
         appState.errorMsg = error?.message || 'Unknown error';
         broadcastState();

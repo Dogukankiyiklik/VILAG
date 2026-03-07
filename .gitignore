@@ -5,4 +5,5 @@ out/
 *.tsbuildinfo
 .env
 .env.local
-ui-tars-yapı
+ui-tars-yapı/
+logs/
