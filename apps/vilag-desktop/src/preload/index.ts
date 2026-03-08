@@ -25,6 +25,12 @@ const api = {
   getSettings: () => ipcRenderer.invoke('getSettings'),
   updateSettings: (settings: any) => ipcRenderer.invoke('updateSettings', settings),
 
+  // HITL - Approval
+  onApprovalRequest: (callback: (request: any) => void) => {
+    ipcRenderer.on('approval-request', (_event, request) => callback(request));
+  },
+  respondApproval: (approved: boolean) => ipcRenderer.invoke('approvalResponse', approved),
+
   // Window controls
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),

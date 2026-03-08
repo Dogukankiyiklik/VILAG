@@ -12,6 +12,7 @@ import { NutJSElectronOperator } from './agent/operator';
 import { createRetriever, injectScenario } from '@vilag/rag';
 import { Planner, PlanExecutor } from '@vilag/planner';
 import type { Subtask } from '@vilag/planner';
+import { ApprovalManager } from '@vilag/hitl';
 import {
   showWidgetWindow,
   hideWidgetWindow,
@@ -25,6 +26,20 @@ const logger = createLogger('Main');
 const isDev = !app.isPackaged;
 const retriever = createRetriever();
 logger.info(`[RAG] Loaded ${retriever ? 'retriever' : 'no retriever'} with scenarios`);
+
+// HITL - Approval Manager
+const approvalManager = new ApprovalManager((request) => {
+  // Send approval request to both mainWindow and widgetWindow
+  const payload = { ...request };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('approval-request', payload);
+  }
+  const widgetWindow = getWidgetWindow();
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    widgetWindow.webContents.send('approval-request', payload);
+  }
+  logger.info(`[HITL] Approval requested for subtask ${request.subtaskId}: ${request.description}`);
+});
 
 // ===== App State =====
 type OperatorMode = 'browser' | 'computer';
@@ -215,6 +230,17 @@ function registerIpcHandlers(): void {
     broadcastState();
   });
 
+  // HITL - Approval response from UI
+  ipcMain.handle('approvalResponse', (_event, approved: boolean) => {
+    if (approved) {
+      logger.info('[HITL] User approved');
+      approvalManager.approve();
+    } else {
+      logger.info('[HITL] User rejected');
+      approvalManager.reject();
+    }
+  });
+
   // Window controls
   ipcMain.on('window:minimize', () => {
     mainWindow?.minimize();
@@ -340,9 +366,14 @@ async function runWithPlanner(
       broadcastState();
     },
     onApprovalNeeded: async (subtask: Subtask) => {
-      // For now, auto-approve. HITL will replace this later.
-      logger.info(`[PlanExecutor] Subtask ${subtask.id} needs approval — auto-approving (HITL not yet active)`);
-      return true;
+      logger.info(`[HITL] Subtask ${subtask.id} requires approval: ${subtask.instruction}`);
+      const approved = await approvalManager.request(
+        subtask.id,
+        subtask.instruction,
+        subtask.riskLevel,
+      );
+      logger.info(`[HITL] Subtask ${subtask.id} ${approved ? 'approved' : 'rejected'} by user`);
+      return approved;
     },
     onExecute: async (subtask: Subtask) => {
       // Check if stopped

@@ -11,8 +11,8 @@ Rules:
 - Keep subtasks simple and atomic.
 - Assign a riskLevel to each subtask:
   - "low": Navigation, clicking menus, opening pages. Easy to undo.
-  - "medium": Typing text, selecting options. Moderate impact.
-  - "high": Sending messages, creating meetings, deleting items. Hard to undo.
+  - "medium": Selecting options, scrolling. Moderate impact.
+  - "high": Typing text and pressing Enter/Submit, sending messages, creating meetings, deleting items. Hard to undo. Any action that submits or confirms something is high risk.
 - Set requiresApproval to true ONLY for "high" risk subtasks.
 - Respond ONLY with valid JSON, no extra text or markdown.
 

@@ -44,6 +44,9 @@ importers:
       '@vilag/electron-ipc':
         specifier: workspace:*
         version: link:../../packages/vilag-electron-ipc
+      '@vilag/hitl':
+        specifier: workspace:^
+        version: link:../../packages/vilag-hitl
       '@vilag/logger':
         specifier: workspace:*
         version: link:../../packages/vilag-logger
@@ -216,6 +219,16 @@ importers:
       electron:
         specifier: 34.1.1
         version: 34.1.1
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/vilag-hitl:
+    dependencies:
+      '@vilag/shared':
+        specifier: workspace:*
+        version: link:../vilag-shared
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
