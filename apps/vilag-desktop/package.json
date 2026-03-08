@@ -19,6 +19,7 @@
         "@vilag/desktop-operator": "workspace:*",
         "@vilag/electron-ipc": "workspace:*",
         "@vilag/logger": "workspace:*",
+        "@vilag/planner": "workspace:^",
         "@vilag/rag": "workspace:^",
         "@vilag/sdk": "workspace:*",
         "@vilag/shared": "workspace:*",

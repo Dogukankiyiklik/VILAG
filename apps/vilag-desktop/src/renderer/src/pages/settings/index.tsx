@@ -1,4 +1,4 @@
-import { Cpu, Globe } from 'lucide-react';
+import { Cpu, Globe, BrainCircuit } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@renderer/components/ui/card';
@@ -18,6 +18,10 @@ interface SettingsState {
   maxLoopCount: number;
   language: 'en' | 'tr';
   searchEngine: string;
+  plannerEnabled: boolean;
+  plannerBaseUrl: string;
+  plannerApiKey: string;
+  plannerModelName: string;
 }
 
 export default function SettingsPage() {
@@ -146,6 +150,66 @@ export default function SettingsPage() {
                 <option value="tr">Türkçe</option>
               </select>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BrainCircuit className="h-4 w-4" />
+              Planner Configuration
+            </CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-medium text-muted-foreground">
+                Enable Planner
+              </label>
+              <input
+                type="checkbox"
+                checked={settings.plannerEnabled ?? false}
+                onChange={(e) => handleSettingsChange('plannerEnabled', e.target.checked)}
+                className="rounded border-input"
+              />
+              <span className="text-xs text-muted-foreground">
+                {settings.plannerEnabled ? 'On — commands will be broken into subtasks' : 'Off — commands run directly'}
+              </span>
+            </div>
+            {settings.plannerEnabled && (
+              <>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Planner API Base URL
+                  </label>
+                  <Input
+                    value={settings.plannerBaseUrl ?? ''}
+                    onChange={(e) => handleSettingsChange('plannerBaseUrl', e.target.value)}
+                    placeholder="http://localhost:1234/v1 or https://api.deepseek.com/v1"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Planner API Key
+                  </label>
+                  <Input
+                    value={settings.plannerApiKey ?? ''}
+                    onChange={(e) => handleSettingsChange('plannerApiKey', e.target.value)}
+                    placeholder="API key (or 'lm-studio' for local)"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Planner Model Name
+                  </label>
+                  <Input
+                    value={settings.plannerModelName ?? ''}
+                    onChange={(e) => handleSettingsChange('plannerModelName', e.target.value)}
+                    placeholder="e.g., deepseek-chat, qwen2.5-3b, gpt-4o-mini"
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

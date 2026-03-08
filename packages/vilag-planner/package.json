@@ -1,0 +1,25 @@
+{
+    "name": "@vilag/planner",
+    "version": "0.0.1",
+    "description": "Planner module for VILAG - breaks complex commands into subtasks",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "import": "./src/index.ts",
+            "types": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit"
+    },
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@vilag/shared": "workspace:*",
+        "openai": "^4.73.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.2"
+    }
+}

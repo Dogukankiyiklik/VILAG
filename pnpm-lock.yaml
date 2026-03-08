@@ -47,6 +47,9 @@ importers:
       '@vilag/logger':
         specifier: workspace:*
         version: link:../../packages/vilag-logger
+      '@vilag/planner':
+        specifier: workspace:^
+        version: link:../../packages/vilag-planner
       '@vilag/rag':
         specifier: workspace:^
         version: link:../../packages/vilag-rag
@@ -218,6 +221,19 @@ importers:
         version: 5.9.3
 
   packages/vilag-logger:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/vilag-planner:
+    dependencies:
+      '@vilag/shared':
+        specifier: workspace:*
+        version: link:../vilag-shared
+      openai:
+        specifier: ^4.73.0
+        version: 4.104.0(zod@3.25.76)
     devDependencies:
       typescript:
         specifier: ^5.7.2
