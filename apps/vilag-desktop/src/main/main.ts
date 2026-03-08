@@ -15,6 +15,7 @@ import {
   showScreenWaterFlow,
   hideScreenWaterFlow,
   closeScreenMarker,
+  getWidgetWindow,
 } from './window/ScreenMarker';
 
 const logger = createLogger('Main');
@@ -176,6 +177,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('pauseAgent', () => {
     if (currentAgent) {
       currentAgent.pause();
+      appState.status = 'pause';
       appState.thinking = false;
       broadcastState();
     }
@@ -185,6 +187,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('resumeAgent', () => {
     if (currentAgent) {
       currentAgent.resume();
+      appState.status = StatusEnum.RUNNING;
       appState.thinking = true;
       broadcastState();
     }
@@ -265,7 +268,10 @@ async function runAgent(): Promise<void> {
           'conversations:',
           conversations.length,
         );
-        appState.status = status;
+        // Don't let 'running' overwrite user-initiated 'pause'
+        if (!(appState.status === 'pause' && status === StatusEnum.RUNNING)) {
+          appState.status = status;
+        }
         appState.messages = [...appState.messages, ...conversations];
         broadcastState();
       },
@@ -354,11 +360,13 @@ call_user() # Call the user when the task is unsolvable.
 }
 
 function broadcastState(): void {
+  const statePayload = { ...appState, abortController: undefined };
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('stateUpdate', {
-      ...appState,
-      abortController: undefined,
-    });
+    mainWindow.webContents.send('stateUpdate', statePayload);
+  }
+  const widgetWindow = getWidgetWindow();
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    widgetWindow.webContents.send('stateUpdate', statePayload);
   }
 }
 

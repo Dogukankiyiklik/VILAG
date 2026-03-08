@@ -42,12 +42,13 @@ export default function WidgetPage() {
   }, []);
 
   const isRunning = status === 'running';
+  const isPaused = status === 'pause';
 
   const handlePlayPause = async () => {
-    if (isRunning) {
-      await window.vilagAPI?.pauseAgent();
-    } else {
+    if (isPaused) {
       await window.vilagAPI?.resumeAgent();
+    } else if (isRunning) {
+      await window.vilagAPI?.pauseAgent();
     }
   };
 
@@ -63,7 +64,7 @@ export default function WidgetPage() {
           VILAG Agent
         </span>
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
-          {isRunning ? 'Running' : thinking ? 'Thinking' : 'Idle'}
+          {isRunning ? 'Running' : isPaused ? 'Paused' : thinking ? 'Thinking' : 'Idle'}
         </span>
       </div>
 
@@ -81,14 +82,16 @@ export default function WidgetPage() {
 
       <div className="mt-auto flex justify-end gap-2 pt-2">
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40"
           onClick={handlePlayPause}
+          disabled={!isRunning && !isPaused}
         >
-          {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
         </button>
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-red-300 bg-white text-red-500 hover:bg-red-50"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-red-300 bg-white text-red-500 hover:bg-red-50 disabled:opacity-40"
           onClick={handleStop}
+          disabled={!isRunning && !isPaused}
         >
           <Square className="h-3 w-3" />
         </button>

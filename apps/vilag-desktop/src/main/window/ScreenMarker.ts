@@ -184,6 +184,10 @@ class ScreenMarker {
     this.hideWidgetWindow();
     this.hideScreenWaterFlow();
   }
+
+  getWidgetWindow(): BrowserWindow | null {
+    return this.widgetWindow;
+  }
 }
 
 export const showScreenWaterFlow = () => {
@@ -204,5 +208,9 @@ export const hideWidgetWindow = () => {
 
 export const closeScreenMarker = () => {
   ScreenMarker.getInstance().closeAll();
+};
+
+export const getWidgetWindow = () => {
+  return ScreenMarker.getInstance().getWidgetWindow();
 };
 

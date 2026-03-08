@@ -241,6 +241,7 @@ export class GUIAgent<T extends Operator> {
   }
 
   pause(): void {
+    if (this.isPaused) return; // Already paused, don't create new Promise
     this.isPaused = true;
     this.resumePromise = new Promise((resolve) => {
       this.resolveResume = resolve;
@@ -249,17 +250,19 @@ export class GUIAgent<T extends Operator> {
   }
 
   resume(): void {
+    this.isPaused = false;
     if (this.resolveResume) {
       this.resolveResume();
       this.resumePromise = null;
       this.resolveResume = null;
     }
-    this.isPaused = false;
     this.logger.info('[GUIAgent] Resumed');
   }
 
   stop(): void {
     this.isStopped = true;
+    // If paused, resume first so the loop can exit
+    this.resume();
     this.logger.info('[GUIAgent] Stopped');
   }
 

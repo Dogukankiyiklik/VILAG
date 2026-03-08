@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MessageCirclePlus, Square, Play } from 'lucide-react';
+import { MessageCirclePlus, Square, Play, Pause } from 'lucide-react';
 
 import { Card } from '@renderer/components/ui/card';
 import {
@@ -59,6 +59,14 @@ export default function LocalPage() {
     await window.vilagAPI?.stopAgent();
   };
 
+  const handlePauseResume = async () => {
+    if (status === 'pause') {
+      await window.vilagAPI?.resumeAgent();
+    } else {
+      await window.vilagAPI?.pauseAgent();
+    }
+  };
+
   const getStatusLabel = () => {
     switch (status) {
       case 'running':
@@ -77,6 +85,7 @@ export default function LocalPage() {
   };
 
   const isRunning = status === 'running';
+  const isPaused = status === 'pause';
 
   const getDisplayText = (msg: any) => {
     if (!msg) return '';
@@ -101,8 +110,26 @@ export default function LocalPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={handlePauseResume}
+            disabled={!isRunning && !isPaused}
+          >
+            {isPaused ? (
+              <>
+                <Play className="h-4 w-4" />
+                Resume
+              </>
+            ) : (
+              <>
+                <Pause className="h-4 w-4" />
+                Pause
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleStop}
-            disabled={!isRunning && !thinking}
+            disabled={!isRunning && !isPaused && !thinking}
           >
             <Square className="h-4 w-4" />
             Stop
