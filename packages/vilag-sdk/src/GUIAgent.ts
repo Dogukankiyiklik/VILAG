@@ -26,6 +26,8 @@ export class GUIAgent<T extends Operator> {
   private readonly logger: Logger;
   private isPaused = false;
   private isStopped = false;
+  private resumePromise: Promise<void> | null = null;
+  private resolveResume: (() => void) | null = null;
   private sessionId: string;
 
   private readonly config: GUIAgentConfig<T>;
@@ -70,10 +72,11 @@ export class GUIAgent<T extends Operator> {
         break;
       }
 
-      // Handle pause
-      while (this.isPaused && !this.isStopped) {
+      // Handle pause (Promise-based for HITL support)
+      if (this.isPaused && this.resumePromise) {
         this.emitData(StatusEnum.PAUSE, conversations);
-        await sleep(500);
+        this.logger.info('[GUIAgent] Waiting for resume...');
+        await this.resumePromise;
       }
       if (this.isStopped) break;
 
@@ -239,10 +242,18 @@ export class GUIAgent<T extends Operator> {
 
   pause(): void {
     this.isPaused = true;
+    this.resumePromise = new Promise((resolve) => {
+      this.resolveResume = resolve;
+    });
     this.logger.info('[GUIAgent] Paused');
   }
 
   resume(): void {
+    if (this.resolveResume) {
+      this.resolveResume();
+      this.resumePromise = null;
+      this.resolveResume = null;
+    }
     this.isPaused = false;
     this.logger.info('[GUIAgent] Resumed');
   }
