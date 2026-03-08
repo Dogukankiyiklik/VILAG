@@ -24,8 +24,9 @@
     },
     "license": "Apache-2.0",
     "dependencies": {
-        "@vilag/shared": "workspace:*",
         "@vilag/action-parser": "workspace:*",
+        "@vilag/shared": "workspace:*",
+        "jimp": "1.6.0",
         "openai": "^4.73.0"
     },
     "devDependencies": {

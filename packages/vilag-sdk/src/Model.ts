@@ -5,8 +5,55 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { parseAction } from '@vilag/action-parser';
-import { UITarsModelVersion, MAX_PIXELS_V1_0, MAX_PIXELS_V1_5 } from '@vilag/shared/constants';
+import { UITarsModelVersion, MAX_PIXELS_V1_0, MAX_PIXELS_V1_5, MAX_PIXELS_DOUBAO } from '@vilag/shared/constants';
 import type { UITarsModelConfig, InvokeParams, InvokeOutput } from './types';
+import { Jimp } from 'jimp';
+
+/**
+ * Clean base64 string prefix
+ */
+function replaceBase64Prefix(base64Str: string): string {
+  if (base64Str.startsWith('data:image/')) {
+    return base64Str.replace(/^data:image\/\w+;base64,/, '');
+  }
+  return base64Str;
+}
+
+/**
+ * Resize image if it exceeds max pixels
+ */
+async function preprocessResizeImage(
+  base64Str: string,
+  maxPixels: number
+): Promise<string> {
+  const cleanBase64 = replaceBase64Prefix(base64Str);
+
+  if (!maxPixels || maxPixels <= 0) {
+    return cleanBase64;
+  }
+
+  try {
+    const buffer = Buffer.from(cleanBase64, 'base64');
+    const image = await Jimp.fromBuffer(buffer);
+    const width = image.bitmap.width;
+    const height = image.bitmap.height;
+
+    if (width * height > maxPixels) {
+      const ratio = Math.sqrt(maxPixels / (width * height));
+      const newWidth = Math.floor(width * ratio);
+      const newHeight = Math.floor(height * ratio);
+
+      image.resize({ w: newWidth, h: newHeight });
+      const resizedBuffer = await image.getBuffer('image/jpeg');
+      return resizedBuffer.toString('base64');
+    }
+
+    return cleanBase64;
+  } catch (error) {
+    console.warn('[UITarsModel] Image resize failed, using original', error);
+    return cleanBase64;
+  }
+}
 
 export class UITarsModel {
   private client: OpenAI;
@@ -77,9 +124,22 @@ export class UITarsModel {
     // Build messages for the model
     const messages: ChatCompletionMessageParam[] = [...conversations] as ChatCompletionMessageParam[];
 
+    // Prepare images with resizing
+    const maxPixels =
+      uiTarsVersion === UITarsModelVersion.V1_5
+        ? MAX_PIXELS_V1_5
+        : uiTarsVersion === UITarsModelVersion.DOUBAO_1_5_15B ||
+          uiTarsVersion === UITarsModelVersion.DOUBAO_1_5_20B
+          ? MAX_PIXELS_DOUBAO
+          : MAX_PIXELS_V1_0;
+
+    const compressedImages = await Promise.all(
+      images.map(img => preprocessResizeImage(img, maxPixels))
+    );
+
     // Add the latest screenshot as an image in the last user message
-    if (images.length > 0) {
-      const lastImage = images[images.length - 1];
+    if (compressedImages.length > 0) {
+      const lastImage = compressedImages[compressedImages.length - 1];
       const imageMessage: ChatCompletionMessageParam = {
         role: 'user',
         content: [
@@ -104,10 +164,7 @@ export class UITarsModel {
     );
 
     // Parse the prediction into structured actions
-    const parsedPredictions = parseAction(prediction, {
-      screenContext,
-      modelVersion: uiTarsVersion,
-    });
+    const parsedPredictions = parseAction(prediction);
 
     return {
       prediction,

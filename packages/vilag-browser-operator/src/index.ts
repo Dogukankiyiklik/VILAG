@@ -79,7 +79,8 @@ export class BrowserOperator implements Operator {
 
       // Navigate to search engine or start URL
       const startUrl = this.options.startUrl || this.getSearchEngineUrl();
-      await this.currentPage.goto(startUrl, { waitUntil: 'domcontentloaded' }).catch(() => { });
+      await this.currentPage.goto(startUrl, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+      await sleep(5000); // ⬇️ DEĞİŞİKLİK: Teams'in tamamen yüklenmesi için 5 sn ekstra bekle
     }
 
     // Get the most recent page
@@ -252,17 +253,9 @@ export class BrowserOperator implements Operator {
     }
 
     // Resolve coordinates from model output to screen pixels.
-    // Prefers pre-computed start_coords from the parser (accounts for v1.5 smartResize).
-    // Falls back to manual factor-based scaling if coords aren't pre-computed.
-    const resolveCoords = (input: any, coordsKey: string = 'start_coords'): { x: number; y: number } => {
+    // Fallback manual factor-based scaling
+    const resolveCoords = (input: any): { x: number; y: number } => {
       if (!input) return { x: 0, y: 0 };
-
-      // Use pre-computed pixel coords from action parser (v1.5-aware)
-      if (input[coordsKey] && Array.isArray(input[coordsKey]) && input[coordsKey].length === 2) {
-        return { x: input[coordsKey][0], y: input[coordsKey][1] };
-      }
-
-      // Fallback: manual scaling (v1.0 compat)
       const raw = input.start_box || input.point || input.start_point || input;
       const x = typeof raw.x === 'number' ? raw.x : 0;
       const y = typeof raw.y === 'number' ? raw.y : 0;
@@ -276,6 +269,8 @@ export class BrowserOperator implements Operator {
     switch (action_type) {
       case 'click': {
         const coords = resolveCoords(action_inputs);
+        const viewport = page.viewportSize() || { width: 1280, height: 720 };
+        console.log(`[DEBUG] CLICK at pixel: x=${coords.x}, y=${coords.y} | viewport: width=${viewport.width}, height=${viewport.height}`);
         await page.mouse.click(coords.x, coords.y);
         await this.waitForPageSettle(page);
         break;
@@ -349,8 +344,8 @@ export class BrowserOperator implements Operator {
         break;
       }
       case 'drag': {
-        const startCoords = resolveCoords(action_inputs, 'start_coords');
-        const endCoords = resolveCoords(action_inputs, 'end_coords');
+        const startCoords = resolveCoords(action_inputs.start_box || action_inputs);
+        const endCoords = resolveCoords(action_inputs.end_box || action_inputs);
         await page.mouse.move(startCoords.x, startCoords.y);
         await page.mouse.down();
         await page.mouse.move(endCoords.x, endCoords.y, { steps: 10 });
@@ -434,7 +429,7 @@ export class DefaultBrowserOperator extends BrowserOperator {
     searchEngine: SearchEngine = 'google',
     // ⬇️ DEĞİŞİKLİK 1: Ajanın DİREKT olarak hangi siteye gideceğini buraya yazabilirsiniz.
     // Örnek: startUrl: string = 'https://teams.microsoft.com/v2/',
-    startUrl: string = 'https://teams.live.com/v2/',
+    startUrl: string = 'https://www.google.com/',
 
     // ⬇️ DEĞİŞİKLİK 2: Oturum çerezini (Giriş bilgilerini) saklamak için burayı 'true' yapın.
     // Örnek: usePersistentProfile: boolean = true,
@@ -449,7 +444,7 @@ export class DefaultBrowserOperator extends BrowserOperator {
         headless: false,
         searchEngine,
         startUrl, // If undefined, getActivePage() falls back to Google
-        highlightElements: true,
+        highlightElements: false,
         usePersistentProfile,
         profileDir,
       });

@@ -19,6 +19,7 @@ import type { GUIAgentConfig, Operator, Logger } from './types';
 import { UITarsModel } from './Model';
 
 const MAX_SCREENSHOT_ERROR_COUNT = 3;
+const MAX_IMAGE_LENGTH = 2;
 
 export class GUIAgent<T extends Operator> {
   private readonly operator: T;
@@ -98,33 +99,57 @@ export class GUIAgent<T extends Operator> {
         }
 
         const { base64, scaleFactor, width, height } = screenshotOutput;
-        const screenWidth = width ? Math.round(width * scaleFactor) : Math.round(1920 * scaleFactor);
-        const screenHeight = height ? Math.round(height * scaleFactor) : Math.round(1080 * scaleFactor);
 
-        // Add the screenshot as a user message
-        messages.push({
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${replaceBase64Prefix(base64)}`,
+        if (!width || !height) {
+          throw new Error('Operator must return valid positive width and height for screenshot.');
+        }
+
+        const screenWidth = Math.round(width * scaleFactor);
+        const screenHeight = Math.round(height * scaleFactor);
+
+        // Build a history text block from previous conversations to prevent hallucination 
+        // when older images are dropped.
+        let historyText = '';
+        if (conversations.length > 0) {
+          historyText = '\\n\\n## History Messages\\n';
+          conversations.forEach((conv) => {
+            historyText += `assistant: ${conv.prediction}\\n`;
+          });
+        }
+
+        // Build the current prompt format
+        // We only send the System Prompt + ONE User message containing:
+        // 1. The original instruction
+        // 2. The history of actions (if any)
+        // 3. The current screenshot
+        const currentMessages: Message[] = [
+          ...(this.config.systemPrompt
+            ? [{ role: 'system' as const, content: this.config.systemPrompt }]
+            : []),
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Instruction: ${instruction}${historyText}\\n\\nCurrent screen:`,
               },
-            },
-            {
-              type: 'text',
-              text: 'What is the next action to perform?',
-            },
-          ],
-        });
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:image/jpeg;base64,${replaceBase64Prefix(base64)}`,
+                },
+              },
+            ],
+          },
+        ];
 
-        // === Step 2: Call Model ===
-        this.emitData(StatusEnum.RUNNING, conversations, instruction, messages);
+        // Ensure we emit the history-aware messages array
+        this.emitData(StatusEnum.RUNNING, conversations, instruction, currentMessages);
 
         let invokeOutput;
         try {
           invokeOutput = await this.model.invoke({
-            conversations: messages,
+            conversations: currentMessages,
             images: [],
             screenContext: {
               width: Math.round(screenWidth / scaleFactor),
@@ -143,7 +168,7 @@ export class GUIAgent<T extends Operator> {
               this.logger.info(`[GUIAgent] Model retry ${i + 1}/${maxRetries}`);
               await sleep(1000 * (i + 1));
               invokeOutput = await this.model.invoke({
-                conversations: messages,
+                conversations: currentMessages,
                 images: [],
                 screenContext: {
                   width: Math.round(screenWidth / scaleFactor),
@@ -159,7 +184,7 @@ export class GUIAgent<T extends Operator> {
             }
           }
           if (!retried) {
-            this.emitError(ErrorStatusEnum.MODEL_SERVICE_ERROR, e as Error, conversations, instruction, messages);
+            this.emitError(ErrorStatusEnum.MODEL_SERVICE_ERROR, e as Error, conversations, instruction, currentMessages);
             break;
           }
         }

@@ -237,6 +237,9 @@ importers:
       '@vilag/shared':
         specifier: workspace:*
         version: link:../vilag-shared
+      jimp:
+        specifier: 1.6.0
+        version: 1.6.0
       openai:
         specifier: ^4.73.0
         version: 4.104.0(zod@3.25.76)

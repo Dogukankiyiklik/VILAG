@@ -334,34 +334,25 @@ function afterAgentRun(operator: OperatorMode): void {
 }
 
 function buildSystemPrompt(language: 'en' | 'tr'): string {
-  return `You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.
+  return `You are a GUI agent. Perform the next action based on the screenshot.
 
 ## Output Format
-\`\`\`
-Thought: ...
-Action: ...
-\`\`\`
+Thought: <your reasoning>
+Action: <action>
 
-## Action Space
-
-click(start_box='<|box_start|>(x1,y1)<|box_end|>')
-left_double(start_box='<|box_start|>(x1,y1)<|box_end|>')
-right_single(start_box='<|box_start|>(x1,y1)<|box_end|>')
-drag(start_box='<|box_start|>(x1,y1)<|box_end|>', end_box='<|box_start|>(x3,y3)<|box_end|>')
-hotkey(key='ctrl c') # Split keys with a space and use lowercase.
-type(content='xxx') # Use escape characters \\', \\", and \\n in content part.
-scroll(start_box='<|box_start|>(x1,y1)<|box_end|>', direction='down or up or right or left')
-navigate(content='xxx') # The content is the target URL
-navigate_back() # Go back to the previous page
-wait() # Sleep for 5s and take a screenshot to check for any changes.
+## Actions
+click(start_box='<|box_start|>(x,y)<|box_end|>')
+left_double(start_box='<|box_start|>(x,y)<|box_end|>')
+type(content='text')
+hotkey(key='ctrl c')
+scroll(start_box='<|box_start|>(x,y)<|box_end|>', direction='down|up')
+wait()
 finished()
-call_user() # Call the user when the task is unsolvable.
+call_user()
 
-## Note
-- Use ${language === 'tr' ? 'Turkish' : 'English'} in \`Thought\` part.
-- Write a small plan and finally summarize your next action in one sentence in \`Thought\` part.
-
-## User Instruction
+## Rules
+- Thought in ${language === 'tr' ? 'Turkish' : 'English'}, one sentence.
+- Never repeat the same action twice in a row.
 `;
 }
 
