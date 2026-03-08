@@ -1,0 +1,17 @@
+{
+  "id": "create-meeting",
+  "title": "Create a New Meeting",
+  "description": "Schedule a new meeting in Teams calendar",
+  "keywords": ["toplantı", "oluştur", "planla", "meeting", "create", "schedule", "takvim", "calendar", "davet", "invite"],
+  "steps": [
+    { "order": 1, "action": "Click the Calendar icon on the left sidebar", "element": "Calendar icon", "actionType": "click" },
+    { "order": 2, "action": "Click the '+ New meeting' button at the top right", "element": "New meeting button", "actionType": "click" },
+    { "order": 3, "action": "Type the meeting title in the 'Add title' field", "element": "Title field", "actionType": "type" },
+    { "order": 4, "action": "Add attendees by typing names in the 'Add required attendees' field", "element": "Attendees field", "actionType": "type" },
+    { "order": 5, "action": "Select the correct person from suggestions", "element": "Person suggestion", "actionType": "click" },
+    { "order": 6, "action": "Set the date and time for the meeting", "element": "Date/time picker", "actionType": "click" },
+    { "order": 7, "action": "Click the 'Send' button to create the meeting and send invites", "element": "Send button", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in", "Calendar section is accessible"],
+  "expectedResult": "Meeting is created and invitations are sent to attendees"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "share-file",
+  "title": "Share a File in Chat",
+  "description": "Share a file with someone through Teams chat",
+  "keywords": ["dosya", "paylaş", "gönder", "file", "share", "upload", "yükle", "ekle", "attach", "belge", "document"],
+  "steps": [
+    { "order": 1, "action": "Click the Chat icon on the left sidebar", "element": "Chat icon", "actionType": "click" },
+    { "order": 2, "action": "Open the chat with the person you want to share with", "element": "Chat item", "actionType": "click" },
+    { "order": 3, "action": "Click the attach/paperclip icon below the message input", "element": "Attach button", "actionType": "click" },
+    { "order": 4, "action": "Select 'Upload from my computer' from the menu", "element": "Upload option", "actionType": "click" },
+    { "order": 5, "action": "Select the file from the file picker dialog", "element": "File picker", "actionType": "click" },
+    { "order": 6, "action": "Click 'Open' or 'Send' to share the file", "element": "Send button", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in", "File exists on the computer"],
+  "expectedResult": "File is shared in the chat"
+}

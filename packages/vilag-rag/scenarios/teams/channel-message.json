@@ -1,0 +1,16 @@
+{
+  "id": "channel-message",
+  "title": "Send a Channel Message",
+  "description": "Post a message in a team channel",
+  "keywords": ["kanal", "channel", "takım", "team", "mesaj", "post", "yaz", "gönder", "send", "paylaş"],
+  "steps": [
+    { "order": 1, "action": "Click the Teams icon on the left sidebar", "element": "Teams icon", "actionType": "click" },
+    { "order": 2, "action": "Select the team from the teams list", "element": "Team item", "actionType": "click" },
+    { "order": 3, "action": "Click the target channel under the team", "element": "Channel item", "actionType": "click" },
+    { "order": 4, "action": "Click the message input box at the bottom", "element": "Message input", "actionType": "click" },
+    { "order": 5, "action": "Type the message", "element": "Message input", "actionType": "type" },
+    { "order": 6, "action": "Press Enter or click Send to post the message", "element": "Send button", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in", "User is a member of the team"],
+  "expectedResult": "Message is posted in the channel"
+}

@@ -47,6 +47,9 @@ importers:
       '@vilag/logger':
         specifier: workspace:*
         version: link:../../packages/vilag-logger
+      '@vilag/rag':
+        specifier: workspace:^
+        version: link:../../packages/vilag-rag
       '@vilag/sdk':
         specifier: workspace:*
         version: link:../../packages/vilag-sdk
@@ -215,6 +218,16 @@ importers:
         version: 5.9.3
 
   packages/vilag-logger:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/vilag-rag:
+    dependencies:
+      '@vilag/shared':
+        specifier: workspace:*
+        version: link:../vilag-shared
     devDependencies:
       typescript:
         specifier: ^5.7.2

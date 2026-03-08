@@ -1,0 +1,16 @@
+{
+  "id": "send-message",
+  "title": "Send a Chat Message",
+  "description": "Send a direct message to a person in Teams chat",
+  "keywords": ["mesaj", "gönder", "yaz", "message", "send", "chat", "yazı", "ilet", "direct"],
+  "steps": [
+    { "order": 1, "action": "Click the Chat icon on the left sidebar", "element": "Chat icon", "actionType": "click" },
+    { "order": 2, "action": "Click the search or 'New chat' button at the top", "element": "New chat button", "actionType": "click" },
+    { "order": 3, "action": "Type the person's name in the 'To' field", "element": "To field", "actionType": "type" },
+    { "order": 4, "action": "Select the correct person from the dropdown suggestions", "element": "Person suggestion", "actionType": "click" },
+    { "order": 5, "action": "Type the message in the message input box at the bottom", "element": "Message input", "actionType": "type" },
+    { "order": 6, "action": "Press Enter or click the Send button to send the message", "element": "Send button", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "Message is sent and appears in the chat"
+}

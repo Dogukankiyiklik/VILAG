@@ -1,0 +1,12 @@
+{
+  "id": "view-calendar",
+  "title": "View Calendar",
+  "description": "View the weekly or daily calendar in Teams",
+  "keywords": ["takvim", "görüntüle", "calendar", "view", "hafta", "week", "gün", "day", "program", "schedule", "ajanda"],
+  "steps": [
+    { "order": 1, "action": "Click the Calendar icon on the left sidebar", "element": "Calendar icon", "actionType": "click" },
+    { "order": 2, "action": "Use the day/week/month toggle at the top right to switch views if needed", "element": "View toggle", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "Calendar view is displayed"
+}

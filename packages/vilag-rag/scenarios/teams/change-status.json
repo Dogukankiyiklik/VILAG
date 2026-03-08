@@ -1,0 +1,13 @@
+{
+  "id": "change-status",
+  "title": "Change Online Status",
+  "description": "Change user status to online, busy, away, etc.",
+  "keywords": ["durum", "değiştir", "status", "change", "online", "busy", "away", "meşgul", "uzakta", "çevrimiçi", "müsait", "available", "rahatsız", "dnd"],
+  "steps": [
+    { "order": 1, "action": "Click on your profile picture/avatar at the top right", "element": "Profile avatar", "actionType": "click" },
+    { "order": 2, "action": "Click on the current status indicator in the dropdown", "element": "Status indicator", "actionType": "click" },
+    { "order": 3, "action": "Select the desired status from the list (Available, Busy, Do not disturb, Away)", "element": "Status option", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "User status is changed"
+}

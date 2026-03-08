@@ -1,0 +1,15 @@
+{
+  "id": "join-meeting",
+  "title": "Join an Existing Meeting",
+  "description": "Join a scheduled or ongoing meeting in Teams",
+  "keywords": ["toplantı", "katıl", "gir", "join", "meeting", "attend", "bağlan", "connect"],
+  "steps": [
+    { "order": 1, "action": "Click the Calendar icon on the left sidebar", "element": "Calendar icon", "actionType": "click" },
+    { "order": 2, "action": "Find and click the meeting you want to join", "element": "Meeting item", "actionType": "click" },
+    { "order": 3, "action": "Click the 'Join' button in the meeting details", "element": "Join button", "actionType": "click" },
+    { "order": 4, "action": "Configure audio/video settings in the pre-join screen if needed", "element": "Pre-join settings", "actionType": "click" },
+    { "order": 5, "action": "Click 'Join now' to enter the meeting", "element": "Join now button", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in", "Meeting exists in calendar"],
+  "expectedResult": "User joins the meeting successfully"
+}

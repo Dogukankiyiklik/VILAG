@@ -9,6 +9,7 @@ import { DefaultBrowserOperator } from '@vilag/browser-operator';
 import { createLogger } from '@vilag/logger';
 import { StatusEnum } from '@vilag/shared/types';
 import { NutJSElectronOperator } from './agent/operator';
+import { createRetriever, injectScenario } from '@vilag/rag';
 import {
   showWidgetWindow,
   hideWidgetWindow,
@@ -20,6 +21,8 @@ import {
 
 const logger = createLogger('Main');
 const isDev = !app.isPackaged;
+const retriever = createRetriever();
+logger.info(`[RAG] Loaded ${retriever ? 'retriever' : 'no retriever'} with scenarios`);
 
 // ===== App State =====
 type OperatorMode = 'browser' | 'computer';
@@ -245,8 +248,15 @@ async function runAgent(): Promise<void> {
           )
         : new NutJSElectronOperator();
 
-    // Build system prompt
-    const systemPrompt = buildSystemPrompt(settings.language);
+    // Build system prompt with RAG
+    const basePrompt = buildSystemPrompt(settings.language);
+    const scenario = retriever.retrieve(instructions);
+    if (scenario) {
+      logger.info('[RAG] Matched scenario:', scenario.id, scenario.title);
+    } else {
+      logger.info('[RAG] No matching scenario found, using base prompt');
+    }
+    const systemPrompt = injectScenario(basePrompt, scenario);
 
     // Create agent
     const agent = new GUIAgent({

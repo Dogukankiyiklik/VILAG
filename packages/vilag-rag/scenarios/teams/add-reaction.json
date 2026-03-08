@@ -1,0 +1,13 @@
+{
+  "id": "add-reaction",
+  "title": "Add Reaction to a Message",
+  "description": "React to a message with an emoji",
+  "keywords": ["tepki", "emoji", "reaction", "react", "beğen", "like", "gülen", "kalp", "heart", "thumbs"],
+  "steps": [
+    { "order": 1, "action": "Hover over the message you want to react to", "element": "Message", "actionType": "click" },
+    { "order": 2, "action": "Click the emoji/reaction icon that appears above the message", "element": "Reaction toolbar", "actionType": "click" },
+    { "order": 3, "action": "Select the desired emoji reaction", "element": "Emoji option", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in", "There is a message to react to"],
+  "expectedResult": "Reaction is added to the message"
+}

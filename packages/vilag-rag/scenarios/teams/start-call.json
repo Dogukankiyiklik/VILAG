@@ -1,0 +1,13 @@
+{
+  "id": "start-call",
+  "title": "Start a Call",
+  "description": "Start an audio or video call with a person",
+  "keywords": ["ara", "call", "arama", "görüntülü", "video", "sesli", "audio", "telefon", "phone", "ring"],
+  "steps": [
+    { "order": 1, "action": "Click the Chat icon on the left sidebar", "element": "Chat icon", "actionType": "click" },
+    { "order": 2, "action": "Open the chat with the person you want to call", "element": "Chat item", "actionType": "click" },
+    { "order": 3, "action": "Click the audio call or video call icon at the top right of the chat", "element": "Call button", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "Call is initiated with the person"
+}

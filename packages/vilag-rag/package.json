@@ -1,0 +1,24 @@
+{
+    "name": "@vilag/rag",
+    "version": "0.0.1",
+    "description": "RAG module for VILAG - Teams scenario retrieval and prompt injection",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "import": "./src/index.ts",
+            "types": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit"
+    },
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@vilag/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.2"
+    }
+}

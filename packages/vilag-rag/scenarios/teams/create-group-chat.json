@@ -1,0 +1,16 @@
+{
+  "id": "create-group-chat",
+  "title": "Create a Group Chat",
+  "description": "Start a new group chat with multiple people",
+  "keywords": ["grup", "group", "oluştur", "create", "chat", "sohbet", "toplu", "çoklu", "multiple", "yeni"],
+  "steps": [
+    { "order": 1, "action": "Click the Chat icon on the left sidebar", "element": "Chat icon", "actionType": "click" },
+    { "order": 2, "action": "Click the 'New chat' button at the top", "element": "New chat button", "actionType": "click" },
+    { "order": 3, "action": "Type the first person's name in the 'To' field", "element": "To field", "actionType": "type" },
+    { "order": 4, "action": "Select the person from suggestions", "element": "Person suggestion", "actionType": "click" },
+    { "order": 5, "action": "Type additional person names and select them", "element": "To field", "actionType": "type" },
+    { "order": 6, "action": "Type a message and send to start the group chat", "element": "Message input", "actionType": "type" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "Group chat is created with selected people"
+}

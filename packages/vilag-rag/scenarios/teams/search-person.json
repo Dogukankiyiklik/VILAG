@@ -1,0 +1,14 @@
+{
+  "id": "search-person",
+  "title": "Search for a Person",
+  "description": "Find a person in Teams using search",
+  "keywords": ["ara", "bul", "kişi", "search", "find", "person", "kullanıcı", "user", "contact", "rehber"],
+  "steps": [
+    { "order": 1, "action": "Click the search bar at the top of Teams", "element": "Search bar", "actionType": "click" },
+    { "order": 2, "action": "Type the person's name in the search bar", "element": "Search bar", "actionType": "type" },
+    { "order": 3, "action": "Click on the 'People' tab in search results to filter", "element": "People tab", "actionType": "click" },
+    { "order": 4, "action": "Click on the person from the results", "element": "Person result", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "Person's profile or chat is opened"
+}

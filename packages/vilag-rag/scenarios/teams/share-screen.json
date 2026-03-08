@@ -1,0 +1,14 @@
+{
+  "id": "share-screen",
+  "title": "Share Screen in Meeting",
+  "description": "Share your screen during a Teams meeting",
+  "keywords": ["ekran", "paylaş", "screen", "share", "sunum", "present", "göster", "show", "toplantı", "meeting"],
+  "steps": [
+    { "order": 1, "action": "During an active meeting, find the share/present button in the meeting toolbar", "element": "Share button", "actionType": "click" },
+    { "order": 2, "action": "Click the 'Share content' or screen share icon", "element": "Share content button", "actionType": "click" },
+    { "order": 3, "action": "Select what to share: entire screen, window, or PowerPoint", "element": "Share option", "actionType": "click" },
+    { "order": 4, "action": "Click on the screen or window you want to share", "element": "Screen/window selection", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is in an active meeting"],
+  "expectedResult": "Screen is being shared with meeting participants"
+}

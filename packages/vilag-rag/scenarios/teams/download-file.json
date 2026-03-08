@@ -1,0 +1,14 @@
+{
+  "id": "download-file",
+  "title": "Download a Shared File",
+  "description": "Download a file that was shared in a chat or channel",
+  "keywords": ["indir", "download", "dosya", "file", "kaydet", "save", "indirme"],
+  "steps": [
+    { "order": 1, "action": "Navigate to the chat or channel where the file was shared", "element": "Chat/Channel", "actionType": "click" },
+    { "order": 2, "action": "Find the shared file in the conversation", "element": "File attachment", "actionType": "click" },
+    { "order": 3, "action": "Hover over the file and click the three-dot menu or download icon", "element": "More options", "actionType": "click" },
+    { "order": 4, "action": "Click 'Download' from the menu", "element": "Download option", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in", "A file has been shared"],
+  "expectedResult": "File is downloaded to the computer"
+}
