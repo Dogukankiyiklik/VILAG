@@ -83,3 +83,11 @@ Planner Model Name: qwen2.5:3b
 - 7B, 2B'ye göre orijinal Ui-tars'da daha iyi çalışıyordu. ancak VILAG'da desktop bozuk olduğu için deneyemedim. Onun yerine tarayıcıda oturum açılabilir veya tarayıcı ilk açıldığında teams sayfasını açtırabiliriz. Çünkü onu açmaya çalışırken de biraz zorlanıyor. Yani amacımız Teasm sayfasını direkt ajana vermek olmalı.
 
 - Planlama için Kılavuza bakılabilir.
+
+
+## YAPILANLAR
+- HITL eklendi. Ancak doğru çalışıp çalışmadığını tam kontrol edemedim.
+- Planlama eklendi. Planlama opsiyonel, isteyen ayarlardan açıp, kapatabilir. Eğer kullanmak isterseniz ollama üzerinden qwen2.5:3b modelini indirip Kurulum ve Çalıştırma başlığındaki ayarları yapmanız yeterli.
+- Basit bir RAG eklendi. Eşleşme olursa çekip prompt'a ekliyor. 
+- Arayüzde ufak düzeltmeler yapıldı.
+- Bundan sonrası var olan yapıyı daha da iyileştirmek olabilir. Şu anki halini çok az düzenlenmeye ihtyiacı var. Ayrcıa bunları Teasm özelinde denemek gerekli, ben denemedim. Tüm her şey düzeltildikten sonra var olan yapıları daha da iyileştirmek kalıyor.
