@@ -22,6 +22,10 @@ Proje, pnpm kullanarak monorepo yapisi ile organize edilmistir. Projeyi calistir
    ui-tars-2b-sft
    ```
 
+Planner API Base URL: http://localhost:11434/v1
+Planner API Key: ollama
+Planner Model Name: qwen2.5:3b
+
 ## Proje Yapisi
 
 - apps/vilag-desktop: Ana Electron masaustu uygulamasi.
