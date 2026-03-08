@@ -49,7 +49,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 p-6">
+    <div className="flex h-full flex-col gap-6 p-6 overflow-y-auto">
       <div className="settings-header">
         <h2 className="text-2xl font-semibold tracking-tight">Agent Preferences</h2>
         <p className="text-sm text-muted-foreground">
