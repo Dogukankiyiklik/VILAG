@@ -1,13 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { MessageCirclePlus, Square, Play, Pause } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MessageCirclePlus, Square, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Card } from '@renderer/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@renderer/components/ui/tabs';
 import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Textarea } from '@renderer/components/ui/textarea';
@@ -22,10 +16,23 @@ export default function LocalPage() {
   const [status, setStatus] = useState<string>('end');
   const [thinking, setThinking] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
+  const [currentScreenshotIndex, setCurrentScreenshotIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Derive screenshots from messages - each conversation has screenshotBase64
+  const screenshots = useMemo(() => {
+    return messages
+      .filter((msg: any) => msg?.screenshotBase64)
+      .map((msg: any) => {
+        const b64 = msg.screenshotBase64;
+        // If already a data URI, use as-is; otherwise add prefix
+        if (b64.startsWith('data:')) return b64;
+        return `data:image/jpeg;base64,${b64}`;
+      });
+  }, [messages]);
 
   useEffect(() => {
     window.vilagAPI?.getState().then((state: any) => {
@@ -48,6 +55,12 @@ export default function LocalPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, thinking, errorMsg]);
+
+  useEffect(() => {
+    if (screenshots.length > 0) {
+      setCurrentScreenshotIndex(screenshots.length - 1);
+    }
+  }, [screenshots.length]);
 
   const handleRun = async () => {
     if (!instruction.trim()) return;
@@ -175,8 +188,8 @@ export default function LocalPage() {
                         {text}
                       </div>
                     ) : (
-                      <div className="rounded-md bg-muted px-3 py-2 text-[11px] text-muted-foreground">
-                        Full details available in the \"Raw Messages\" tab.
+                      <div className="rounded-md bg-muted px-3 py-2 text-[11px] text-muted-foreground italic">
+                        [System action]
                       </div>
                     )}
                   </div>
@@ -216,24 +229,44 @@ export default function LocalPage() {
         </Card>
 
         <Card className="flex-1 basis-3/5 p-3 h-[calc(100vh-76px)] flex flex-col">
-          <Tabs defaultValue="screenshot" className="flex-1 flex flex-col">
-            <TabsList>
-              <TabsTrigger value="screenshot">Screenshot</TabsTrigger>
-              <TabsTrigger value="raw">Raw Messages</TabsTrigger>
-            </TabsList>
-            <TabsContent value="screenshot" className="flex-1 mt-3">
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground border rounded-md">
-                Screenshot gallery will be implemented here.
+          <div className="flex items-center justify-between mb-2 px-2">
+            <span className="text-sm font-medium">Screenshots</span>
+            {screenshots.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentScreenshotIndex(Math.max(0, currentScreenshotIndex - 1))}
+                  disabled={currentScreenshotIndex === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs">{currentScreenshotIndex + 1} / {screenshots.length}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentScreenshotIndex(Math.min(screenshots.length - 1, currentScreenshotIndex + 1))}
+                  disabled={currentScreenshotIndex === screenshots.length - 1}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </TabsContent>
-            <TabsContent value="raw" className="flex-1 mt-3">
-              <ScrollArea className="h-full rounded-md border px-2 py-1">
-                <pre className="text-[11px] whitespace-pre-wrap">
-                  {JSON.stringify(messages, null, 2)}
-                </pre>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
+          <div className="flex-1 mt-1 rounded-md border bg-muted overflow-hidden flex items-center justify-center">
+            {screenshots.length > 0 ? (
+              <img 
+                src={screenshots[currentScreenshotIndex]} 
+                alt="Agent screenshot" 
+                className="max-w-full max-h-full object-contain"
+              />
+            ) : (
+              <div className="text-xs text-muted-foreground flex flex-col items-center gap-2">
+                <span>No screenshots available yet.</span>
+                <span>Run the agent to see progress.</span>
+              </div>
+            )}
+          </div>
         </Card>
       </div>
     </div>

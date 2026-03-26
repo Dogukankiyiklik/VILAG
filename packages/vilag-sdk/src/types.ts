@@ -74,6 +74,7 @@ export interface GUIAgentConfig<TOperator> {
   onError?: (params: { data: GUIAgentData; error: GUIAgentError }) => void;
   /** Called after each loop iteration with detailed step data for debug logging */
   onStepLog?: (stepData: StepLogData) => void;
+  onScreenshot?: (base64: string) => void;
   logger?: Logger;
   retry?: {
     model?: RetryConfig;

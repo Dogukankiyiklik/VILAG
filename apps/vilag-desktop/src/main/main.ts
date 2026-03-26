@@ -54,6 +54,7 @@ interface AppState {
   status: string;
   errorMsg: string | null;
   messages: any[];
+  screenshots: string[];
   thinking: boolean;
   abortController: AbortController | null;
   settings: {
@@ -77,6 +78,7 @@ let appState: AppState = {
   status: StatusEnum.END,
   errorMsg: null,
   messages: [],
+  screenshots: [],
   thinking: false,
   abortController: null,
   settings: {
@@ -180,6 +182,7 @@ function registerIpcHandlers(): void {
     appState.abortController = new AbortController();
     appState.errorMsg = null;
     appState.status = StatusEnum.RUNNING;
+    appState.screenshots = [];
     broadcastState();
 
     try {
@@ -229,6 +232,7 @@ function registerIpcHandlers(): void {
   // Clear history
   ipcMain.handle('clearHistory', () => {
     appState.messages = [];
+    appState.screenshots = [];
     appState.status = StatusEnum.END;
     appState.errorMsg = null;
     appState.instructions = '';
@@ -458,6 +462,10 @@ function createAgent(
         appState.status = status;
       }
       appState.messages = [...appState.messages, ...conversations];
+      broadcastState();
+    },
+    onScreenshot: (base64: string) => {
+      appState.screenshots.push(`data:image/png;base64,${base64}`);
       broadcastState();
     },
     onStepLog: (stepData: StepLogData) => {

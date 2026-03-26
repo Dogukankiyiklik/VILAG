@@ -109,6 +109,7 @@ export class GUIAgent<T extends Operator> {
         const screenshotMs = Date.now() - screenshotStartTime;
 
         const { base64, scaleFactor } = screenshotOutput;
+        this.config.onScreenshot?.(base64);
         const screenWidth = Math.round(1920 * scaleFactor); // Will be refined
         const screenHeight = Math.round(1080 * scaleFactor);
 
