@@ -94,7 +94,7 @@ function parseSingleAction(actionStr: string): PredictionParsed | null {
 /**
  * Parse box coordinates: [x1, y1, x2, y2] or <|box_start|>(x1,y1)<|box_end|>
  */
-function parseCoordinates(value: string): { x: number; y: number } | { x1: number; y1: number; x2: number; y2: number } {
+function parseCoordinates(value: string): { x: number; y: number; isRawPixel?: boolean } | { x1: number; y1: number; x2: number; y2: number } {
   // Format: <|box_start|>(x1,y1)<|box_end|>
   const boxStartMatch = value.match(/<\|box_start\|>\((\d+),\s*(\d+)\)<\|box_end\|>/);
   if (boxStartMatch) {
@@ -114,6 +114,17 @@ function parseCoordinates(value: string): { x: number; y: number } | { x1: numbe
     return {
       x: Math.round((x1 + x2) / 2),
       y: Math.round((y1 + y2) / 2),
+    };
+  }
+
+  // Format: (x,y) — raw pixel coordinates (model omitted special tokens)
+  // These are pixel coords relative to the screenshot, NOT normalized 0-1000
+  const simpleMatch = value.match(/^\((\d+),\s*(\d+)\)$/);
+  if (simpleMatch) {
+    return {
+      x: parseInt(simpleMatch[1]),
+      y: parseInt(simpleMatch[2]),
+      isRawPixel: true,
     };
   }
 

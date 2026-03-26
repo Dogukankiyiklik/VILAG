@@ -1,6 +1,3 @@
-/**
- * VILAG SDK - Types
- */
 import type {
   Message,
   GUIAgentData,
@@ -8,6 +5,7 @@ import type {
   ScreenshotResult,
   GUIAgentError,
   StatusEnum,
+  StepLogData,
 } from '@vilag/shared/types';
 import { UITarsModelVersion } from '@vilag/shared/constants';
 
@@ -74,6 +72,8 @@ export interface GUIAgentConfig<TOperator> {
   signal?: AbortSignal;
   onData?: (params: { data: GUIAgentData }) => void;
   onError?: (params: { data: GUIAgentData; error: GUIAgentError }) => void;
+  /** Called after each loop iteration with detailed step data for debug logging */
+  onStepLog?: (stepData: StepLogData) => void;
   logger?: Logger;
   retry?: {
     model?: RetryConfig;

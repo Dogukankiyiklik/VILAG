@@ -1,6 +1,7 @@
 node_modules/
 dist/
 out/
+logs/
 .turbo/
 *.tsbuildinfo
 .env

@@ -6,8 +6,9 @@ import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { join } from 'path';
 import { GUIAgent } from '@vilag/sdk';
 import { DefaultBrowserOperator } from '@vilag/browser-operator';
-import { createLogger } from '@vilag/logger';
+import { createLogger, createSessionLogger, type SessionLogger } from '@vilag/logger';
 import { StatusEnum } from '@vilag/shared/types';
+import type { StepLogData } from '@vilag/shared/types';
 import { NutJSElectronOperator } from './agent/operator';
 import { createRetriever, injectScenario } from '@vilag/rag';
 import { Planner, PlanExecutor } from '@vilag/planner';
@@ -26,6 +27,10 @@ const logger = createLogger('Main');
 const isDev = !app.isPackaged;
 const retriever = createRetriever();
 logger.info(`[RAG] Loaded ${retriever ? 'retriever' : 'no retriever'} with scenarios`);
+
+// Logs directory (project root / logs)
+const LOGS_DIR = join(app.getAppPath(), '..', '..', 'logs');
+let currentSessionLogger: SessionLogger | null = null;
 
 // HITL - Approval Manager
 const approvalManager = new ApprovalManager((request) => {
@@ -284,6 +289,21 @@ async function runAgent(): Promise<void> {
           )
         : new NutJSElectronOperator();
 
+    // Create session logger for this run
+    const sessionId = `vilag-${Date.now()}`;
+    currentSessionLogger = createSessionLogger(LOGS_DIR, sessionId);
+    currentSessionLogger.logSessionInfo({
+      sessionId,
+      startedAt: new Date().toISOString(),
+      instruction: instructions,
+      operator: mode,
+      model: {
+        baseURL: settings.vlmBaseUrl,
+        modelName: settings.vlmModelName,
+      },
+      systemPrompt: buildSystemPrompt(settings.language).substring(0, 500) + '...',
+    });
+
     // Check if planner is enabled and configured
     const usePlanner =
       settings.plannerEnabled &&
@@ -296,6 +316,7 @@ async function runAgent(): Promise<void> {
       await runDirect(instructions, settings, operatorInstance);
     }
   } finally {
+    currentSessionLogger = null;
     afterAgentRun(mode);
   }
 }
@@ -438,6 +459,19 @@ function createAgent(
       }
       appState.messages = [...appState.messages, ...conversations];
       broadcastState();
+    },
+    onStepLog: (stepData: StepLogData) => {
+      if (!currentSessionLogger) return;
+      try {
+        // Save screenshot as PNG
+        if (stepData.screenshotBase64) {
+          currentSessionLogger.saveScreenshot(stepData.loopNumber, stepData.screenshotBase64);
+        }
+        // Save step log as JSON
+        currentSessionLogger.logStep(stepData);
+      } catch (e) {
+        logger.error('[SessionLog] Error saving step log:', e);
+      }
     },
     onError: ({ error }) => {
       logger.error('[onError]', error);

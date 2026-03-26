@@ -69,6 +69,42 @@ export interface GUIAgentError {
   stack?: string;
 }
 
+// ===== Step Log Data (Debug Logging) =====
+export interface StepLogData {
+  /** Loop iteration number */
+  loopNumber: number;
+  /** ISO timestamp */
+  timestamp: string;
+  /** Screenshot dimensions */
+  screenshot: {
+    width: number;
+    height: number;
+    scaleFactor: number;
+  };
+  /** Base64 screenshot (for file saving, stripped from JSON log) */
+  screenshotBase64?: string;
+  /** Messages sent to VLM (images replaced with placeholder) */
+  prompt: Array<{ role: string; content: string | object }>;
+  /** Raw model prediction text */
+  rawPrediction: string;
+  /** Parsed actions from model output */
+  parsedActions: PredictionParsed[];
+  /** Execution results for each action */
+  executeResults: Array<{
+    actionType: string;
+    actionInputs: Record<string, any>;
+    status?: string;
+    error?: string;
+  }>;
+  /** Timing info in ms */
+  timing: {
+    screenshotMs: number;
+    modelMs: number;
+    executeMs: number;
+    totalMs: number;
+  };
+}
+
 // ===== Share =====
 export interface ShareVersion {
   sdkVersion?: string;

@@ -118,8 +118,16 @@ export class BrowserOperator implements Operator {
       const raw = input.start_box || input.point || input.start_point || input;
       const x = typeof raw.x === 'number' ? raw.x : 0;
       const y = typeof raw.y === 'number' ? raw.y : 0;
-      // Scale from model coordinate space to viewport
       const viewport = page.viewportSize() || { width: 1280, height: 720 };
+
+      // When model omits special tokens, parser marks coords as raw pixels.
+      // These are pixel coords relative to the screenshot, which is taken at
+      // viewport resolution. Use them directly — no scaling needed.
+      if (raw.isRawPixel) {
+        return { x, y };
+      }
+
+      // Normalized coordinates (0-1000) — standard UI-TARS path
       return {
         x: Math.round((x / factors[0]) * viewport.width),
         y: Math.round((y / factors[1]) * viewport.height),
