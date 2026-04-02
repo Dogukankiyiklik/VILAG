@@ -1,18 +1,15 @@
 /**
- * VILAG - Screen utilities
- *
- * Helper to get primary display sizes in both logical and physical pixels.
+ * Birincil ekranın boyutlarını hem mantıksal (logical) hem de fiziksel (physical)
+ * pikseller cinsinden hesaplayan yardımcı fonksiyon.
  */
 import { screen } from 'electron';
-
-import * as env from '@main/env';
 
 export const getScreenSize = () => {
   const primaryDisplay = screen.getPrimaryDisplay();
 
-  const logicalSize = primaryDisplay.size; // Logical = Physical / scaleX
-  // On macOS retina displays, use 1 to keep coordinates simple.
-  const scaleFactor = env.isMacOS ? 1 : primaryDisplay.scaleFactor;
+  const logicalSize = primaryDisplay.size; // Mantıksal boyut = Fiziksel / ölçekleme (scaleX)
+
+  const scaleFactor = primaryDisplay.scaleFactor;
 
   const physicalSize = {
     width: Math.round(logicalSize.width * scaleFactor),
@@ -26,4 +23,3 @@ export const getScreenSize = () => {
     scaleFactor,
   };
 };
-

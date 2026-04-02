@@ -1,8 +1,9 @@
 /**
- * VILAG - Environment helpers
+ * Ortam (Environment) yardımcı fonksiyonları.
  *
- * Lightweight version of the UI-TARS env module. We currently only need
- * platform flags, but this can be extended later for config values.
+ * İşletim sistemi platformunu (Windows, Mac vb.) ve çalışma modunu
+ * (geliştirme/production) her seferinde uzun uzun kontrol etmek yerine
+ * kolayca kullanabilmemiz için tanımlanan sabitler.
  */
 import os from 'node:os';
 
@@ -16,7 +17,7 @@ export const isWindows = platform === 'win32';
 export const isLinux = platform === 'linux';
 
 /**
- * Detect Windows 11 based on build number.
+ * Sürüm (build) numarasına bakarak bilgisayarda Windows 11 kurulu olup olmadığını tespit eder.
  * @see https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information
  */
 const detectingWindows11 = () => {
@@ -31,4 +32,3 @@ const detectingWindows11 = () => {
 };
 
 export const isWindows11 = detectingWindows11();
-

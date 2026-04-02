@@ -1,5 +1,5 @@
 /**
- * VILAG Desktop - Electron Main Process
+ * VILAG Desktop - Electron Ana Süreci (Main Process)
  */
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
@@ -28,13 +28,13 @@ const isDev = !app.isPackaged;
 const retriever = createRetriever();
 logger.info(`[RAG] Loaded ${retriever ? 'retriever' : 'no retriever'} with scenarios`);
 
-// Logs directory (project root / logs)
+// Log dizini (proje kök dizini / logs)
 const LOGS_DIR = join(app.getAppPath(), '..', '..', 'logs');
 let currentSessionLogger: SessionLogger | null = null;
 
-// HITL - Approval Manager
+// HITL (Human-in-the-Loop) - Onay Yöneticisi
 const approvalManager = new ApprovalManager((request) => {
-  // Send approval request to both mainWindow and widgetWindow
+  // Onay isteğini hem ana pencereye hem de widget penceresine gönder
   const payload = { ...request };
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('approval-request', payload);
@@ -46,7 +46,7 @@ const approvalManager = new ApprovalManager((request) => {
   logger.info(`[HITL] Approval requested for subtask ${request.subtaskId}: ${request.description}`);
 });
 
-// ===== App State =====
+// ===== Uygulama Durumu (App State) =====
 type OperatorMode = 'browser' | 'computer';
 
 interface AppState {
@@ -124,7 +124,7 @@ function createMainWindow(): BrowserWindow {
     win.show();
   });
 
-  // Load renderer
+  // Renderer'ı (arayüzü) yükle
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL']);
   } else {
@@ -147,14 +147,14 @@ function showMainWindow() {
   }
 }
 
-// ===== IPC Handlers =====
+// ===== IPC İşleyicileri (Arayüz - Arka Plan İletişimi) =====
 function registerIpcHandlers(): void {
-  // Get current state
+  // Mevcut durumu al
   ipcMain.handle('getState', () => {
     return { ...appState, abortController: undefined };
   });
 
-  // Update settings
+  // Ayarları güncelle
   ipcMain.handle('updateSettings', (_event, settings) => {
     appState.settings = { ...appState.settings, ...settings };
     if (settings.operator) {
@@ -268,7 +268,7 @@ function registerIpcHandlers(): void {
   });
 }
 
-// ===== Agent Runner =====
+// ===== Agent Çalıştırıcı (Runner) =====
 async function runAgent(): Promise<void> {
   const { instructions, settings, operator } = appState;
   if (!instructions) throw new Error('Instructions are required');
@@ -280,12 +280,12 @@ async function runAgent(): Promise<void> {
   beforeAgentRun(mode);
 
   try {
-    // Destroy previous browser instance to ensure fresh page
+    // Temiz bir sayfa sağlamak için önceki tarayıcı örneğini yok et
     if (mode === 'browser') {
       await DefaultBrowserOperator.destroyInstance();
     }
 
-    // Create operator based on mode
+    // Moda göre operatörü oluştur (browser veya computer)
     const operatorInstance =
       mode === 'browser'
         ? await DefaultBrowserOperator.getInstance(
@@ -293,7 +293,7 @@ async function runAgent(): Promise<void> {
           )
         : new NutJSElectronOperator();
 
-    // Create session logger for this run
+    // Bu çalışma için oturum loglayıcısını oluştur
     const sessionId = `vilag-${Date.now()}`;
     currentSessionLogger = createSessionLogger(LOGS_DIR, sessionId);
     currentSessionLogger.logSessionInfo({
@@ -308,7 +308,7 @@ async function runAgent(): Promise<void> {
       systemPrompt: buildSystemPrompt(settings.language).substring(0, 500) + '...',
     });
 
-    // Check if planner is enabled and configured
+    // Planlayıcının (Planner) açık ve yapılandırılmış olup olmadığını kontrol et
     const usePlanner =
       settings.plannerEnabled &&
       settings.plannerBaseUrl &&
@@ -326,7 +326,7 @@ async function runAgent(): Promise<void> {
 }
 
 /**
- * Run directly without planner (original behavior + RAG).
+ * Planlayıcı olmadan doğrudan çalıştırır (orijinal davranış + RAG).
  */
 async function runDirect(
   instructions: string,
@@ -349,14 +349,14 @@ async function runDirect(
 }
 
 /**
- * Run with planner: create plan → execute each subtask with RAG.
+ * Planlayıcı ile çalıştırır: plan oluştur → her alt görevi RAG ile çalıştır.
  */
 async function runWithPlanner(
   instructions: string,
   settings: AppState['settings'],
   operatorInstance: any,
 ): Promise<void> {
-  // 1. Create plan
+  // 1. Planı oluştur
   logger.info('[Planner] Creating plan...');
   const planner = new Planner({
     baseURL: settings.plannerBaseUrl,
@@ -383,7 +383,7 @@ async function runWithPlanner(
     return;
   }
 
-  // 2. Execute each subtask
+  // 2. Her alt görevi yürüt
   const executor = new PlanExecutor();
   await executor.executePlan(plan, {
     onSubtaskStart: async (subtask: Subtask) => {
@@ -401,7 +401,7 @@ async function runWithPlanner(
       return approved;
     },
     onExecute: async (subtask: Subtask) => {
-      // Check if stopped
+      // Durdurulup durdurulmadığını kontrol et
       if (appState.abortController?.signal.aborted) return;
 
       // RAG for this subtask
@@ -431,7 +431,7 @@ async function runWithPlanner(
 }
 
 /**
- * Helper: create a GUIAgent with common config.
+ * Yardımcı fonksiyon: Ortak yapılandırma ile bir GUIAgent (Yapay Zeka Ajanı) oluşturur.
  */
 function createAgent(
   settings: AppState['settings'],
@@ -457,7 +457,7 @@ function createAgent(
         'conversations:',
         conversations.length,
       );
-      // Don't let 'running' overwrite user-initiated 'pause'
+      // Kullanıcının başlattığı 'pause' (duraklatma) durumunun 'running' (çalışıyor) ile ezilmesine izin verme
       if (!(appState.status === 'pause' && status === StatusEnum.RUNNING)) {
         appState.status = status;
       }
@@ -471,7 +471,7 @@ function createAgent(
     onStepLog: (stepData: StepLogData) => {
       if (!currentSessionLogger) return;
       try {
-        // Save screenshot as PNG
+        // Ekran görüntüsünü PNG olarak kaydet
         if (stepData.screenshotBase64) {
           currentSessionLogger.saveScreenshot(stepData.loopNumber, stepData.screenshotBase64);
         }
@@ -496,34 +496,16 @@ function createAgent(
 }
 
 function beforeAgentRun(operator: OperatorMode): void {
-  switch (operator) {
-    case 'computer':
-      hideMainWindow();
-      showWidgetWindow();
-      showScreenWaterFlow();
-      break;
-    case 'browser':
-    default:
-      hideMainWindow();
-      showWidgetWindow();
-      break;
-  }
+  hideMainWindow();
+  showWidgetWindow();
+  showScreenWaterFlow();
 }
 
 function afterAgentRun(operator: OperatorMode): void {
-  switch (operator) {
-    case 'computer':
-      hideWidgetWindow();
-      closeScreenMarker();
-      hideScreenWaterFlow();
-      showMainWindow();
-      break;
-    case 'browser':
-    default:
-      hideWidgetWindow();
-      showMainWindow();
-      break;
-  }
+  hideWidgetWindow();
+  closeScreenMarker();
+  hideScreenWaterFlow();
+  showMainWindow();
 }
 
 function buildSystemPrompt(language: 'en' | 'tr'): string {
@@ -569,7 +551,7 @@ function broadcastState(): void {
   }
 }
 
-// ===== App Lifecycle =====
+// ===== Uygulama Yaşam Döngüsü (App Lifecycle) =====
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.vilag.agent');
 

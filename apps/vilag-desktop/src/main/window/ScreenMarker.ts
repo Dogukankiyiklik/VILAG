@@ -1,9 +1,9 @@
-/**
- * VILAG - Screen Marker & Widget Window
+/*
+ * Agent çalışırken ekrana yerleştirilen overlay pencereler.
  *
- * Simplified version of UI-TARS ScreenMarker:
- * - screenWaterFlow: subtle blue border animation while the agent is running
- * - widgetWindow: small floating window that shows the widget UI (#widget route)
+ * İki parçadan oluşur:
+ * - screenWaterFlow: Ekran kenarlarında dönen mavi ışık animasyonu (masaüstü modunda)
+ * - widgetWindow: Sağ alt köşede agent durumunu gösteren küçük floating pencere
  */
 import { app, BrowserWindow, screen } from 'electron';
 import { join } from 'path';
@@ -25,6 +25,7 @@ class ScreenMarker {
     return ScreenMarker.instance;
   }
 
+  /** Ekranın kenarlarında mavi animasyon başlatır — agent'ın çalıştığını gösterir. */
   showScreenWaterFlow() {
     if (this.screenWaterFlow) {
       return;
@@ -125,6 +126,7 @@ class ScreenMarker {
     }
   }
 
+  /** Sağ alt köşede küçük floating pencere açar — agent kontrollerini gösterir. */
   showWidgetWindow() {
     if (this.widgetWindow) {
       this.widgetWindow.close();
@@ -136,7 +138,7 @@ class ScreenMarker {
 
     this.widgetWindow = new BrowserWindow({
       width: 400,
-      height: 400,
+      height: 600,
       transparent: true,
       frame: false,
       alwaysOnTop: true,
@@ -154,9 +156,10 @@ class ScreenMarker {
 
     this.widgetWindow.setFocusable(false);
     this.widgetWindow.setContentProtection(true);
+
     this.widgetWindow.setPosition(
       Math.floor(screenWidth - 400 - 32),
-      Math.floor(screenHeight - 400 - 32 - 64),
+      Math.floor(screenHeight - 600 - 32 - 64),
     );
 
     const devUrl = process.env['ELECTRON_RENDERER_URL'];
@@ -190,6 +193,7 @@ class ScreenMarker {
   }
 }
 
+// main.ts'den kolayca çağırılabilmesi için dışa açılan kısayollar
 export const showScreenWaterFlow = () => {
   ScreenMarker.getInstance().showScreenWaterFlow();
 };
@@ -213,4 +217,3 @@ export const closeScreenMarker = () => {
 export const getWidgetWindow = () => {
   return ScreenMarker.getInstance().getWidgetWindow();
 };
-

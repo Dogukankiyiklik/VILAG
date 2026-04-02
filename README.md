@@ -91,3 +91,26 @@ Planner Model Name: qwen2.5:3b
 - Basit bir RAG eklendi. Eşleşme olursa çekip prompt'a ekliyor. 
 - Arayüzde ufak düzeltmeler yapıldı.
 - Bundan sonrası var olan yapıyı daha da iyileştirmek olabilir. Şu anki halini çok az düzenlenmeye ihtyiacı var. Ayrcıa bunları Teasm özelinde denemek gerekli, ben denemedim. Tüm her şey düzeltildikten sonra var olan yapıları daha da iyileştirmek kalıyor.
+
+---
+
+## Klasör Hiyerarşisi
+
+```
+apps/vilag-desktop/src/
+├── main/                       # Electron Main Process (backend)
+│   ├── main.ts                 # Ana giriş noktası — pencere, IPC, agent döngüsü, planner/RAG/HITL
+│   ├── env.ts                  # Platform tespiti (isMacOS, isWindows, isDev vb.)
+│   ├── agent/
+│   │   └── operator.ts         # Desktop modu için Electron desktopCapturer ile screenshot alma
+│   ├── utils/
+│   │   └── screen.ts           # Ekran boyutu ve scale factor hesaplama
+│   └── window/
+│       └── ScreenMarker.ts     # Agent çalışırken ekran kenarı animasyonu + floating widget penceresi
+│
+├── preload/                    # Main ↔ Renderer arası güvenli köprü
+│   └── ...                     # (ileride detaylandırılacak)
+│
+└── renderer/                   # React UI (frontend)
+    └── ...                     # (ileride detaylandırılacak)
+```
