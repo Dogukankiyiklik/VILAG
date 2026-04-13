@@ -1,37 +1,37 @@
 /**
- * VILAG Desktop - Preload Script
- * Exposes safe electron APIs to the renderer via contextBridge.
+ * VILAG Desktop - Preload (Önyükleme) Scripti
+ * contextBridge aracılığıyla güvenli Electron API'lerini renderer (ön yüz) sürecine sunar.
  */
 import { contextBridge, ipcRenderer } from 'electron';
 
 const api = {
-  // State
+  // Durum (State) Yönetimi
   getState: () => ipcRenderer.invoke('getState'),
   onStateUpdate: (callback: (state: any) => void) => {
     ipcRenderer.on('stateUpdate', (_event, state) => callback(state));
   },
 
-  // Agent control
+  // Ajan (Agent) Kontrolü
   runAgent: () => ipcRenderer.invoke('runAgent'),
   stopAgent: () => ipcRenderer.invoke('stopAgent'),
   pauseAgent: () => ipcRenderer.invoke('pauseAgent'),
   resumeAgent: () => ipcRenderer.invoke('resumeAgent'),
 
-  // Instructions
+  // Talimatlar ve Geçmiş
   setInstructions: (instructions: string) => ipcRenderer.invoke('setInstructions', instructions),
   clearHistory: () => ipcRenderer.invoke('clearHistory'),
 
-  // Settings
+  // Ayarlar
   getSettings: () => ipcRenderer.invoke('getSettings'),
   updateSettings: (settings: any) => ipcRenderer.invoke('updateSettings', settings),
 
-  // HITL - Approval
+  // HITL (Human in the Loop) - Onay Mekanizması
   onApprovalRequest: (callback: (request: any) => void) => {
     ipcRenderer.on('approval-request', (_event, request) => callback(request));
   },
   respondApproval: (approved: boolean) => ipcRenderer.invoke('approvalResponse', approved),
 
-  // Window controls
+  // Pencere Kontrolleri
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),

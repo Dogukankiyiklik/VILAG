@@ -108,8 +108,8 @@ apps/vilag-desktop/src/
 │   └── window/
 │       └── ScreenMarker.ts     # Agent çalışırken ekran kenarı animasyonu + floating widget penceresi
 │
-├── preload/                    # Main ↔ Renderer arası güvenli köprü
-│   └── ...                     # (ileride detaylandırılacak)
+├── preload/                    # Main ↔ Renderer arası güvenli köprü (Bridge)
+│   └── index.ts                # React arayüzünün Electron backend fonksiyonlarıyla (runAgent vb.) iletişim kurmasını sağlayan ContextBridge tanımları.
 │
 └── renderer/                   # React UI (frontend)
     └── ...                     # (ileride detaylandırılacak)

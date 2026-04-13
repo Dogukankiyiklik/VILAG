@@ -47,7 +47,6 @@ export default function WidgetPage() {
       }
     });
 
-    // Listen for approval requests
     window.vilagAPI?.onApprovalRequest((request: ApprovalRequest) => {
       setApproval(request);
     });
@@ -80,39 +79,55 @@ export default function WidgetPage() {
     setApproval(null);
   };
 
+  const getStatusLabel = () => {
+    if (approval) return 'Awaiting Approval';
+    if (isRunning) return 'Running';
+    if (isPaused) return 'Paused';
+    if (thinking) return 'Thinking';
+    return 'Idle';
+  };
+
+  const getStatusDot = () => {
+    if (approval) return 'bg-chart-4';
+    if (isRunning) return 'bg-primary animate-pulse';
+    if (isPaused) return 'bg-ring';
+    if (thinking) return 'bg-primary animate-pulse';
+    return 'bg-muted-foreground/40';
+  };
+
   return (
-    <div className="flex h-full w-full flex-col rounded-xl border bg-white/90 p-3 text-xs text-gray-700">
+    <div className="flex h-full w-full flex-col rounded-xl border border-border bg-card/95 backdrop-blur-sm p-3 text-xs text-card-foreground">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-semibold tracking-tight text-gray-600">
+        <span className="text-[11px] font-semibold tracking-tight text-foreground">
           VILAG Agent
         </span>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
-          {approval ? 'Awaiting Approval' : isRunning ? 'Running' : isPaused ? 'Paused' : thinking ? 'Thinking' : 'Idle'}
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${getStatusDot()}`} />
+          {getStatusLabel()}
         </span>
       </div>
 
-      {/* Approval Dialog */}
       {approval ? (
-        <div className="mb-2 flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-2">
-          <div className="text-[11px] font-semibold text-amber-800">
+        <div className="mb-2 flex flex-col gap-2 rounded-lg border border-chart-4/30 bg-chart-4/5 p-2.5">
+          <div className="text-[11px] font-semibold text-foreground">
             Approval Required
           </div>
-          <div className="text-[11px] text-amber-700">
+          <div className="text-[11px] text-muted-foreground leading-relaxed">
             {approval.description}
           </div>
-          <div className="text-[10px] text-amber-500">
+          <div className="text-[10px] text-muted-foreground/70">
             Risk: {approval.riskLevel}
           </div>
           <div className="flex gap-2 pt-1">
             <button
-              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-green-400 bg-green-50 py-1.5 text-[11px] font-medium text-green-700 hover:bg-green-100"
+              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-primary/30 bg-primary/10 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
               onClick={handleApprove}
             >
               <Check className="h-3 w-3" />
               Approve
             </button>
             <button
-              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-red-300 bg-red-50 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-100"
+              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 py-1.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 transition-colors"
               onClick={handleReject}
             >
               <X className="h-3 w-3" />
@@ -121,29 +136,29 @@ export default function WidgetPage() {
           </div>
         </div>
       ) : (
-        <div className="mb-2 h-20 overflow-hidden text-[11px] text-gray-600">
+        <div className="mb-2 h-20 overflow-hidden text-[11px] text-muted-foreground">
           {lastMessage ? (
-            <pre className="whitespace-pre-wrap">
+            <pre className="whitespace-pre-wrap font-mono">
               {JSON.stringify(lastMessage.predictionParsed ?? lastMessage, null, 2)}
             </pre>
           ) : (
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-muted-foreground/60">
               The agent&apos;s latest thoughts and actions will appear here.
             </p>
           )}
         </div>
       )}
 
-      <div className="mt-auto flex justify-end gap-2 pt-2">
+      <div className="mt-auto flex justify-end gap-2 pt-2 border-t border-border/60">
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 transition-colors"
           onClick={handlePlayPause}
           disabled={(!isRunning && !isPaused) || !!approval}
         >
           {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
         </button>
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-red-300 bg-white text-red-500 hover:bg-red-50 disabled:opacity-40"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-destructive/30 bg-card text-destructive hover:bg-destructive/10 disabled:opacity-40 transition-colors"
           onClick={handleStop}
           disabled={!isRunning && !isPaused && !approval}
         >

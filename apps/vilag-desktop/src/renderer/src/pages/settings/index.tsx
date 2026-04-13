@@ -50,24 +50,24 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col gap-6 p-6 overflow-y-auto">
-      <div className="settings-header">
-        <h2 className="text-2xl font-semibold tracking-tight">Agent Preferences</h2>
-        <p className="text-sm text-muted-foreground">
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Agent Preferences</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Configure your model endpoints, API keys, and behavioral parameters.
         </p>
       </div>
 
       <div className="flex flex-col gap-4 max-w-3xl">
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Cpu className="h-4 w-4" />
+              <Cpu className="h-4 w-4 text-muted-foreground" />
               Model Configuration (LM Studio)
             </CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4 space-y-4">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 API Base URL
               </label>
@@ -77,7 +77,7 @@ export default function SettingsPage() {
                 placeholder="http://localhost:1234/v1"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 API Key
               </label>
@@ -87,7 +87,7 @@ export default function SettingsPage() {
                 placeholder="lm-studio"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 Model Name
               </label>
@@ -100,16 +100,16 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Globe className="h-4 w-4" />
+              <Globe className="h-4 w-4 text-muted-foreground" />
               Browser Controls
             </CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4 grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 Max Execution Steps
               </label>
@@ -123,12 +123,12 @@ export default function SettingsPage() {
                 max={100}
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 Default Search Engine
               </label>
               <select
-                className="form-select bg-background border border-input rounded-md px-2 py-1 text-sm"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={settings.searchEngine}
                 onChange={(e) => handleSettingsChange('searchEngine', e.target.value)}
               >
@@ -137,12 +137,12 @@ export default function SettingsPage() {
                 <option value="baidu">Baidu</option>
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 Agent Instruction Language
               </label>
               <select
-                className="form-select bg-background border border-input rounded-md px-2 py-1 text-sm"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={settings.language}
                 onChange={(e) => handleSettingsChange('language', e.target.value as 'en' | 'tr')}
               >
@@ -153,32 +153,37 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <BrainCircuit className="h-4 w-4" />
+              <BrainCircuit className="h-4 w-4 text-muted-foreground" />
               Planner Configuration
             </CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-muted-foreground">
-                Enable Planner
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.plannerEnabled ?? false}
-                onChange={(e) => handleSettingsChange('plannerEnabled', e.target.checked)}
-                className="rounded border-input"
-              />
-              <span className="text-xs text-muted-foreground">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <span
+                role="switch"
+                aria-checked={settings.plannerEnabled ?? false}
+                onClick={() => handleSettingsChange('plannerEnabled', !settings.plannerEnabled)}
+                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors ${settings.plannerEnabled
+                    ? 'bg-primary border-primary'
+                    : 'bg-input border-input'
+                  }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 rounded-full bg-background shadow-sm transition-transform ${settings.plannerEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                    }`}
+                />
+              </span>
+              <span className="text-xs font-medium text-muted-foreground select-none">
                 {settings.plannerEnabled ? 'On — commands will be broken into subtasks' : 'Off — commands run directly'}
               </span>
-            </div>
+            </label>
             {settings.plannerEnabled && (
-              <>
-                <div className="space-y-1">
+              <div className="space-y-4 pt-2 border-t border-border/60">
+                <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
                     Planner API Base URL
                   </label>
@@ -188,7 +193,7 @@ export default function SettingsPage() {
                     placeholder="http://localhost:1234/v1 or https://api.deepseek.com/v1"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
                     Planner API Key
                   </label>
@@ -198,7 +203,7 @@ export default function SettingsPage() {
                     placeholder="API key (or 'lm-studio' for local)"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
                     Planner Model Name
                   </label>
@@ -208,7 +213,7 @@ export default function SettingsPage() {
                     placeholder="e.g., deepseek-chat, qwen2.5-3b, gpt-4o-mini"
                   />
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -216,4 +221,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

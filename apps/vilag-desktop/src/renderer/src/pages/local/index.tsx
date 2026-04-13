@@ -97,6 +97,22 @@ export default function LocalPage() {
     }
   };
 
+  const getStatusColor = () => {
+    switch (status) {
+      case 'running':
+        return 'bg-primary';
+      case 'pause':
+        return 'bg-ring';
+      case 'error':
+      case 'max_loop':
+        return 'bg-destructive';
+      case 'call_user':
+        return 'bg-chart-4';
+      default:
+        return 'bg-muted-foreground/40';
+    }
+  };
+
   const isRunning = status === 'running';
   const isPaused = status === 'pause';
 
@@ -112,11 +128,12 @@ export default function LocalPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between px-5 py-3 border-b">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-5 py-3 border-b bg-card">
+        <div className="flex items-center gap-2.5">
           <span className="text-sm font-medium">Local Operator</span>
-          <span className="text-xs text-muted-foreground">
-            ({getStatusLabel()})
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${getStatusColor()} ${isRunning ? 'animate-pulse' : ''}`} />
+            {getStatusLabel()}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -159,7 +176,7 @@ export default function LocalPage() {
       </div>
 
       <div className="px-5 pb-5 flex flex-1 gap-5">
-        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 h-[calc(100vh-76px)] flex flex-col">
+        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 shadow-none h-[calc(100vh-76px)] flex flex-col">
           <div className="flex items-center justify-between w-full px-4 mb-2">
             <Button variant="outline" size="sm">
               <MessageCirclePlus className="h-4 w-4" />
@@ -167,9 +184,9 @@ export default function LocalPage() {
             </Button>
           </div>
           <ScrollArea className="flex-1 px-4">
-            <div className="space-y-3" ref={messagesEndRef}>
+            <div className="space-y-4" ref={messagesEndRef}>
               {messages.length === 0 && (
-                <div className="mt-10 text-sm text-muted-foreground">
+                <div className="mt-10 text-sm text-muted-foreground text-center">
                   No messages yet. Describe a task in the input below and press
                   Run.
                 </div>
@@ -177,18 +194,19 @@ export default function LocalPage() {
 
               {messages.map((msg, idx) => {
                 const text = getDisplayText(msg);
+                const isHuman = msg?.from === 'human';
 
                 return (
                   <div key={idx} className="text-sm">
-                    <div className="font-medium mb-1">
-                      {msg?.from === 'human' ? 'User' : 'Agent'}
+                    <div className={`font-medium mb-1.5 text-xs tracking-wide uppercase ${isHuman ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {isHuman ? 'User' : 'Agent'}
                     </div>
                     {text ? (
-                      <div className="rounded-md bg-muted px-3 py-2 text-xs whitespace-pre-wrap">
+                      <div className={`rounded-lg px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-wrap ${isHuman ? 'bg-primary/10 text-foreground' : 'bg-muted text-foreground'}`}>
                         {text}
                       </div>
                     ) : (
-                      <div className="rounded-md bg-muted px-3 py-2 text-[11px] text-muted-foreground italic">
+                      <div className="rounded-lg bg-muted/50 px-3.5 py-2.5 text-[11px] text-muted-foreground italic">
                         [System action]
                       </div>
                     )}
@@ -197,12 +215,17 @@ export default function LocalPage() {
               })}
 
               {thinking && (
-                <div className="mt-2 text-xs text-muted-foreground">
+                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-flex gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse [animation-delay:0.15s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse [animation-delay:0.3s]" />
+                  </span>
                   Thinking...
                 </div>
               )}
               {errorMsg && (
-                <div className="mt-2 text-xs text-red-500 break-words">
+                <div className="mt-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive break-words">
                   {errorMsg}
                 </div>
               )}
@@ -228,23 +251,23 @@ export default function LocalPage() {
           </div>
         </Card>
 
-        <Card className="flex-1 basis-3/5 p-3 h-[calc(100vh-76px)] flex flex-col">
+        <Card className="flex-1 basis-3/5 p-3 shadow-none h-[calc(100vh-76px)] flex flex-col">
           <div className="flex items-center justify-between mb-2 px-2">
             <span className="text-sm font-medium">Screenshots</span>
             {screenshots.length > 0 && (
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setCurrentScreenshotIndex(Math.max(0, currentScreenshotIndex - 1))}
                   disabled={currentScreenshotIndex === 0}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-xs">{currentScreenshotIndex + 1} / {screenshots.length}</span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <span className="text-xs text-muted-foreground tabular-nums">{currentScreenshotIndex + 1} / {screenshots.length}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setCurrentScreenshotIndex(Math.min(screenshots.length - 1, currentScreenshotIndex + 1))}
                   disabled={currentScreenshotIndex === screenshots.length - 1}
                 >
@@ -253,17 +276,17 @@ export default function LocalPage() {
               </div>
             )}
           </div>
-          <div className="flex-1 mt-1 rounded-md border bg-muted overflow-hidden flex items-center justify-center">
+          <div className="flex-1 mt-1 rounded-lg border bg-muted/50 overflow-hidden flex items-center justify-center">
             {screenshots.length > 0 ? (
-              <img 
-                src={screenshots[currentScreenshotIndex]} 
-                alt="Agent screenshot" 
+              <img
+                src={screenshots[currentScreenshotIndex]}
+                alt="Agent screenshot"
                 className="max-w-full max-h-full object-contain"
               />
             ) : (
-              <div className="text-xs text-muted-foreground flex flex-col items-center gap-2">
+              <div className="text-xs text-muted-foreground flex flex-col items-center gap-1.5">
                 <span>No screenshots available yet.</span>
-                <span>Run the agent to see progress.</span>
+                <span className="text-muted-foreground/60">Run the agent to see progress.</span>
               </div>
             )}
           </div>
@@ -272,4 +295,3 @@ export default function LocalPage() {
     </div>
   );
 }
-

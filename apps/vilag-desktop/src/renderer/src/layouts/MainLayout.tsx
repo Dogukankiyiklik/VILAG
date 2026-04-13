@@ -53,11 +53,11 @@ export function MainLayout() {
     <div className="flex flex-col h-screen w-full">
       {/* Custom Titlebar */}
       <div
-        className="flex items-center justify-between h-9 bg-sidebar border-b select-none shrink-0"
+        className="flex items-center justify-between h-9 bg-sidebar border-b border-sidebar-border select-none shrink-0"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex items-center gap-2 px-3">
-          <span className="text-xs font-semibold text-muted-foreground">VILAG</span>
+          <span className="text-xs font-semibold text-sidebar-foreground/60">VILAG</span>
         </div>
         <div
           className="flex items-center h-full"
@@ -65,24 +65,24 @@ export function MainLayout() {
         >
           <button
             onClick={() => window.vilagAPI?.minimize()}
-            className="h-full w-11 flex items-center justify-center hover:bg-muted transition-colors"
+            className="h-full w-11 flex items-center justify-center hover:bg-sidebar-accent transition-colors"
             title="Minimize"
           >
-            <Minus className="h-4 w-4 text-muted-foreground" />
+            <Minus className="h-4 w-4 text-sidebar-foreground/50" />
           </button>
           <button
             onClick={() => window.vilagAPI?.maximize()}
-            className="h-full w-11 flex items-center justify-center hover:bg-muted transition-colors"
+            className="h-full w-11 flex items-center justify-center hover:bg-sidebar-accent transition-colors"
             title="Maximize"
           >
-            <Square className="h-3 w-3 text-muted-foreground" />
+            <Square className="h-3 w-3 text-sidebar-foreground/50" />
           </button>
           <button
             onClick={() => window.vilagAPI?.close()}
-            className="h-full w-11 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors group"
+            className="h-full w-11 flex items-center justify-center hover:bg-destructive transition-colors group"
             title="Close"
           >
-            <X className="h-4 w-4 text-muted-foreground group-hover:text-white" />
+            <X className="h-4 w-4 text-sidebar-foreground/50 group-hover:text-primary-foreground" />
           </button>
         </div>
       </div>
@@ -127,7 +127,6 @@ export function MainLayout() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  variant="outline"
                   size="sm"
                   onClick={toggleTheme}
                 >
@@ -151,4 +150,3 @@ export function MainLayout() {
     </div>
   );
 }
-
