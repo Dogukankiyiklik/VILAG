@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageCirclePlus, Square, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCirclePlus, Square, Play, Pause, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeft } from 'lucide-react';
 
 import { Card } from '@renderer/components/ui/card';
 import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Textarea } from '@renderer/components/ui/textarea';
+import { useSidebar } from '@renderer/components/ui/sidebar';
 
 declare global {
   interface Window {
@@ -20,15 +21,14 @@ export default function LocalPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
 
+  const { state: sidebarState, toggleSidebar } = useSidebar();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derive screenshots from messages - each conversation has screenshotBase64
   const screenshots = useMemo(() => {
     return messages
       .filter((msg: any) => msg?.screenshotBase64)
       .map((msg: any) => {
         const b64 = msg.screenshotBase64;
-        // If already a data URI, use as-is; otherwise add prefix
         if (b64.startsWith('data:')) return b64;
         return `data:image/jpeg;base64,${b64}`;
       });
@@ -118,18 +118,29 @@ export default function LocalPage() {
 
   const getDisplayText = (msg: any) => {
     if (!msg) return '';
-
     if (typeof msg === 'string') return msg;
     if (typeof msg.value === 'string') return msg.value;
     if (typeof msg.prediction === 'string') return msg.prediction;
-
     return '';
   };
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between px-5 py-3 border-b bg-card">
-        <div className="flex items-center gap-2.5">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b bg-card shrink-0">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={toggleSidebar}
+          >
+            {sidebarState === 'expanded' ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <PanelLeft className="h-4 w-4" />
+            )}
+          </Button>
           <span className="text-sm font-medium">Local Operator</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${getStatusColor()} ${isRunning ? 'animate-pulse' : ''}`} />
@@ -175,8 +186,9 @@ export default function LocalPage() {
         </div>
       </div>
 
-      <div className="px-5 pb-5 flex flex-1 gap-5">
-        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 shadow-none h-[calc(100vh-76px)] flex flex-col">
+      {/* Content */}
+      <div className="p-5 flex flex-1 gap-5 min-h-0">
+        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 shadow-none flex flex-col min-h-0">
           <div className="flex items-center justify-between w-full px-4 mb-2">
             <Button variant="outline" size="sm">
               <MessageCirclePlus className="h-4 w-4" />
@@ -251,7 +263,7 @@ export default function LocalPage() {
           </div>
         </Card>
 
-        <Card className="flex-1 basis-3/5 p-3 shadow-none h-[calc(100vh-76px)] flex flex-col">
+        <Card className="flex-1 basis-3/5 p-3 shadow-none flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-2 px-2">
             <span className="text-sm font-medium">Screenshots</span>
             {screenshots.length > 0 && (

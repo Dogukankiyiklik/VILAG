@@ -8,7 +8,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Separator } from '@renderer/components/ui/separator';
 
 const SIDEBAR_WIDTH = '16rem';
-const SIDEBAR_WIDTH_ICON = '3rem';
+const SIDEBAR_WIDTH_ICON = '3.5rem';
 
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed';
@@ -85,8 +85,8 @@ function Sidebar({
       data-slot="sidebar"
       data-state={state}
       className={cn(
-        'bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col border-r',
-        state === 'collapsed' && 'w-(--sidebar-width-icon)',
+        'bg-sidebar text-sidebar-foreground flex h-full flex-col border-r overflow-hidden transition-[width] duration-200',
+        state === 'expanded' ? 'w-(--sidebar-width)' : 'w-(--sidebar-width-icon)',
         className,
       )}
       {...props}
@@ -197,7 +197,7 @@ function SidebarSeparator({
 }
 
 const sidebarMenuButtonVariants = cva(
-  'flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+  'flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -232,11 +232,14 @@ const SidebarMenuButton = React.forwardRef<
       variant = 'default',
       size = 'default',
       className,
+      children,
       ...props
     },
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
+    const { state } = useSidebar();
+    const isCollapsed = state === 'collapsed';
 
     return (
       <Comp
@@ -244,9 +247,20 @@ const SidebarMenuButton = React.forwardRef<
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        title={isCollapsed && typeof children === 'string' ? children : undefined}
+        className={cn(
+          sidebarMenuButtonVariants({ variant, size }),
+          isCollapsed && 'justify-center p-0',
+          className,
+        )}
         {...props}
-      />
+      >
+        {isCollapsed
+          ? React.Children.toArray(children).filter(
+            (child) => React.isValidElement(child) && child.type !== 'span',
+          )
+          : children}
+      </Comp>
     );
   },
 );
@@ -289,4 +303,3 @@ export {
   SidebarTrigger,
   useSidebar,
 };
-

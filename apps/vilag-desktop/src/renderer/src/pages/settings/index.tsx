@@ -133,8 +133,6 @@ export default function SettingsPage() {
                 onChange={(e) => handleSettingsChange('searchEngine', e.target.value)}
               >
                 <option value="google">Google</option>
-                <option value="bing">Bing</option>
-                <option value="baidu">Baidu</option>
               </select>
             </div>
             <div className="space-y-1.5">

@@ -12,12 +12,32 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@renderer/components/ui/sidebar';
 
 declare global {
   interface Window {
     vilagAPI: any;
   }
+}
+
+function SidebarBrand() {
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
+
+  return (
+    <div className={`flex items-center ${isCollapsed ? 'justify-center py-3' : 'gap-2 px-2 py-3'}`}>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+        V
+      </div>
+      {!isCollapsed && (
+        <div className="flex flex-col overflow-hidden">
+          <span className="text-sm font-semibold leading-tight truncate">VILAG</span>
+          <span className="text-xs text-muted-foreground truncate">Desktop Agent</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function MainLayout() {
@@ -50,10 +70,10 @@ export function MainLayout() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex flex-col h-screen w-full overflow-hidden">
       {/* Custom Titlebar */}
       <div
-        className="flex items-center justify-between h-9 bg-sidebar border-b border-sidebar-border select-none shrink-0"
+        className="flex items-center justify-between h-9 bg-sidebar border-b border-sidebar-border select-none shrink-0 z-10"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex items-center gap-2 px-3">
@@ -88,21 +108,13 @@ export function MainLayout() {
       </div>
 
       {/* Main Content */}
-      <SidebarProvider className="flex flex-1 w-full bg-background text-foreground overflow-hidden">
+      <SidebarProvider className="flex flex-1 w-full !min-h-0 bg-background text-foreground overflow-hidden">
         <Sidebar>
           <SidebarHeader>
-            <div className="flex items-center gap-2 px-2 py-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-                V
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold leading-tight">VILAG</span>
-                <span className="text-xs text-muted-foreground">Desktop Agent</span>
-              </div>
-            </div>
+            <SidebarBrand />
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu>
+            <SidebarMenu className="px-1 pt-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={isHome}
@@ -114,8 +126,8 @@ export function MainLayout() {
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter>
-            <SidebarMenu>
+          <SidebarFooter className="pb-3">
+            <SidebarMenu className="px-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={isSettings}
@@ -141,8 +153,8 @@ export function MainLayout() {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-hidden">
+        <SidebarInset className="flex-1 flex flex-col min-h-0">
+          <main className="flex-1 overflow-auto">
             <Outlet />
           </main>
         </SidebarInset>
