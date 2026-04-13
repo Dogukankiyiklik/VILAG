@@ -42,6 +42,9 @@ const approvalManager = new ApprovalManager((request) => {
   const widgetWindow = getWidgetWindow();
   if (widgetWindow && !widgetWindow.isDestroyed()) {
     widgetWindow.webContents.send('approval-request', payload);
+    // Onay isteği geldiğinde widget'ı tıklanabilir yap
+    widgetWindow.setFocusable(true);
+    widgetWindow.focus();
   }
   logger.info(`[HITL] Approval requested for subtask ${request.subtaskId}: ${request.description}`);
 });
@@ -247,6 +250,11 @@ function registerIpcHandlers(): void {
     } else {
       logger.info('[HITL] User rejected');
       approvalManager.reject();
+    }
+    // Onay tamamlandı, widget'ı tekrar non-focusable yap
+    const widgetWin = getWidgetWindow();
+    if (widgetWin && !widgetWin.isDestroyed()) {
+      widgetWin.setFocusable(false);
     }
   });
 

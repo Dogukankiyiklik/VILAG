@@ -108,10 +108,11 @@ export class GUIAgent<T extends Operator> {
         }
         const screenshotMs = Date.now() - screenshotStartTime;
 
-        const { base64, scaleFactor } = screenshotOutput;
+        const { base64, scaleFactor, width: ssWidth, height: ssHeight } = screenshotOutput;
         this.config.onScreenshot?.(base64);
-        const screenWidth = Math.round(1920 * scaleFactor); // Will be refined
-        const screenHeight = Math.round(1080 * scaleFactor);
+        // Prefer real screen size from operator; fall back to 1920×1080
+        const screenWidth = Math.round((ssWidth || 1920) * scaleFactor);
+        const screenHeight = Math.round((ssHeight || 1080) * scaleFactor);
 
         // === Step 2: Call Model ===
         this.emitData(StatusEnum.RUNNING, conversations);

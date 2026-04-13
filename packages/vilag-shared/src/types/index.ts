@@ -24,6 +24,10 @@ export enum ErrorStatusEnum {
 export interface ScreenshotResult {
   base64: string;
   scaleFactor: number;
+  /** Logical screen width (pixels). When provided, GUIAgent uses this instead of hardcoded 1920. */
+  width?: number;
+  /** Logical screen height (pixels). When provided, GUIAgent uses this instead of hardcoded 1080. */
+  height?: number;
 }
 
 export interface PredictionParsed {

@@ -68,6 +68,8 @@ export class NutJSElectronOperator extends NutJSOperator {
     return {
       base64: resized.toJPEG(75).toString('base64'),
       scaleFactor,
+      width: logicalSize.width,
+      height: logicalSize.height,
     };
   }
 }

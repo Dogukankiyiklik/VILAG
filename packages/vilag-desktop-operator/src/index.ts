@@ -121,15 +121,41 @@ export class NutJSOperator extends Operator {
    * Execute an action parsed from the model output.
    */
   async execute(params: ExecuteParams): Promise<ExecuteOutput> {
-    const { parsedPrediction, screenWidth, screenHeight } = params;
+    const { parsedPrediction, screenWidth, screenHeight, scaleFactor, factors } = params;
     const { action_type, action_inputs } = parsedPrediction;
-    const startBoxStr = action_inputs?.start_box || '';
 
-    const { x: startX, y: startY } = parseBoxToScreenCoords({
-      boxStr: startBoxStr,
-      screenWidth,
-      screenHeight,
-    });
+    /**
+     * Koordinat çözümleme: action-parser'dan gelen parsed objeyi ekran pikseline çevirir.
+     * - isRawPixel ise: model ham piksel verdi → scaleFactor ile ölçekle
+     * - değilse: 0-1000 normalize koordinat → factors ile bölüp ekran boyutuyla çarp
+     */
+    const resolveCoords = (input: any): { x: number | null; y: number | null } => {
+      if (!input) return { x: null, y: null };
+
+      // action-parser zaten obje döndürüyor ({x, y, isRawPixel?})
+      if (typeof input === 'object' && typeof input.x === 'number') {
+        if (input.isRawPixel) {
+          // Ham piksel koordinatları — screenshot'a göre, scaleFactor uygula
+          return { x: input.x, y: input.y };
+        }
+        // Normalize 0-1000 koordinatları → gerçek ekran pikseline çevir
+        const logicalW = screenWidth / scaleFactor;
+        const logicalH = screenHeight / scaleFactor;
+        return {
+          x: Math.round((input.x / factors[0]) * logicalW),
+          y: Math.round((input.y / factors[1]) * logicalH),
+        };
+      }
+
+      // Geriye dönük uyumluluk: string gelirse eski parse mantığını kullan
+      if (typeof input === 'string') {
+        return parseBoxToScreenCoords({ boxStr: input, screenWidth, screenHeight });
+      }
+
+      return { x: null, y: null };
+    };
+
+    const { x: startX, y: startY } = resolveCoords(action_inputs?.start_box);
 
     mouse.config.mouseSpeed = 3600;
 
@@ -226,11 +252,7 @@ export class NutJSOperator extends Operator {
       case 'select': {
         const endBox = action_inputs?.end_box;
         if (endBox) {
-          const { x: endX, y: endY } = parseBoxToScreenCoords({
-            boxStr: endBox,
-            screenWidth,
-            screenHeight,
-          });
+          const { x: endX, y: endY } = resolveCoords(endBox);
 
           if (startX && startY && endX && endY) {
             await moveStraightTo(startX, startY);
