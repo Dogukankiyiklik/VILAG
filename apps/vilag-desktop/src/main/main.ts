@@ -313,7 +313,7 @@ async function runAgent(): Promise<void> {
         baseURL: settings.vlmBaseUrl,
         modelName: settings.vlmModelName,
       },
-      systemPrompt: buildSystemPrompt(settings.language).substring(0, 500) + '...',
+      systemPrompt: buildSystemPrompt(settings.language, mode).substring(0, 500) + '...',
     });
 
     // Planlayıcının (Planner) açık ve yapılandırılmış olup olmadığını kontrol et
@@ -323,9 +323,9 @@ async function runAgent(): Promise<void> {
       settings.plannerModelName;
 
     if (usePlanner) {
-      await runWithPlanner(instructions, settings, operatorInstance);
+      await runWithPlanner(instructions, settings, operatorInstance, mode);
     } else {
-      await runDirect(instructions, settings, operatorInstance);
+      await runDirect(instructions, settings, operatorInstance, mode);
     }
   } finally {
     currentSessionLogger = null;
@@ -340,8 +340,9 @@ async function runDirect(
   instructions: string,
   settings: AppState['settings'],
   operatorInstance: any,
+  mode: OperatorMode,
 ): Promise<void> {
-  const basePrompt = buildSystemPrompt(settings.language);
+  const basePrompt = buildSystemPrompt(settings.language, mode);
   const scenario = retriever.retrieve(instructions);
   if (scenario) {
     logger.info('[RAG] Matched scenario:', scenario.id, scenario.title);
@@ -363,6 +364,7 @@ async function runWithPlanner(
   instructions: string,
   settings: AppState['settings'],
   operatorInstance: any,
+  mode: OperatorMode,
 ): Promise<void> {
   // 1. Planı oluştur
   logger.info('[Planner] Creating plan...');
@@ -387,7 +389,7 @@ async function runWithPlanner(
     }
   } catch (e) {
     logger.error('[Planner] Failed to create plan, falling back to direct:', e);
-    await runDirect(instructions, settings, operatorInstance);
+    await runDirect(instructions, settings, operatorInstance, mode);
     return;
   }
 
@@ -413,7 +415,7 @@ async function runWithPlanner(
       if (appState.abortController?.signal.aborted) return;
 
       // RAG for this subtask
-      const basePrompt = buildSystemPrompt(settings.language);
+      const basePrompt = buildSystemPrompt(settings.language, mode);
       const scenario = retriever.retrieve(subtask.instruction);
       if (scenario) {
         logger.info(`[RAG] Subtask ${subtask.id} matched scenario: ${scenario.id}`);
@@ -516,8 +518,12 @@ function afterAgentRun(operator: OperatorMode): void {
   showMainWindow();
 }
 
-function buildSystemPrompt(language: 'en' | 'tr'): string {
-  return `You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.
+function buildSystemPrompt(language: 'en' | 'tr', mode: OperatorMode = 'browser'): string {
+  const lang = language === 'tr' ? 'Turkish' : 'English';
+
+  // Moda göre aksiyonları ve bağlamı ayarla
+  if (mode === 'computer') {
+    return `You are a desktop GUI agent. You control the user's computer via mouse and keyboard. You see screenshots of the full desktop and perform actions to complete the task.
 
 ## Output Format
 \`\`\`
@@ -531,18 +537,49 @@ click(start_box='<|box_start|>(x1,y1)<|box_end|>')
 left_double(start_box='<|box_start|>(x1,y1)<|box_end|>')
 right_single(start_box='<|box_start|>(x1,y1)<|box_end|>')
 drag(start_box='<|box_start|>(x1,y1)<|box_end|>', end_box='<|box_start|>(x3,y3)<|box_end|>')
-hotkey(key='ctrl c') # Split keys with a space and use lowercase.
-type(content='xxx') # Use escape characters \\', \\", and \\n in content part.
+hotkey(key='ctrl c')
+type(content='xxx')
 scroll(start_box='<|box_start|>(x1,y1)<|box_end|>', direction='down or up or right or left')
-navigate(content='xxx') # The content is the target URL
-navigate_back() # Go back to the previous page
-wait() # Sleep for 5s and take a screenshot to check for any changes.
+wait()
 finished()
-call_user() # Call the user when the task is unsolvable.
+call_user()
 
 ## Note
-- Use ${language === 'tr' ? 'Turkish' : 'English'} in \`Thought\` part.
-- Write a small plan and finally summarize your next action in one sentence in \`Thought\` part.
+- Use ${lang} in \`Thought\` part.
+- Summarize your next action in one sentence in \`Thought\` part.
+- You are operating on the full desktop, not a browser.
+
+## User Instruction
+`;
+  }
+
+  // Browser modu prompt'u
+  return `You are a browser GUI agent. You control a web browser to complete tasks. You see screenshots of the browser viewport and perform actions to navigate and interact with web pages.
+
+## Output Format
+\`\`\`
+Thought: ...
+Action: ...
+\`\`\`
+
+## Action Space
+
+click(start_box='<|box_start|>(x1,y1)<|box_end|>')
+left_double(start_box='<|box_start|>(x1,y1)<|box_end|>')
+right_single(start_box='<|box_start|>(x1,y1)<|box_end|>')
+drag(start_box='<|box_start|>(x1,y1)<|box_end|>', end_box='<|box_start|>(x3,y3)<|box_end|>')
+hotkey(key='ctrl c')
+type(content='xxx')
+scroll(start_box='<|box_start|>(x1,y1)<|box_end|>', direction='down or up or right or left')
+navigate(content='xxx')
+navigate_back()
+wait()
+finished()
+call_user()
+
+## Note
+- Use ${lang} in \`Thought\` part.
+- Summarize your next action in one sentence in \`Thought\` part.
 
 ## User Instruction
 `;
