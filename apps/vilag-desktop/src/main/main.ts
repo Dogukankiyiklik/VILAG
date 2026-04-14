@@ -448,6 +448,8 @@ function createAgent(
   systemPrompt: string,
   operatorInstance: any,
 ): GUIAgent<any> {
+  const baseOffset = appState.messages.length;
+
   return new GUIAgent({
     model: {
       baseURL: settings.vlmBaseUrl,
@@ -471,7 +473,8 @@ function createAgent(
       if (!(appState.status === 'pause' && status === StatusEnum.RUNNING)) {
         appState.status = status;
       }
-      appState.messages = [...appState.messages, ...conversations];
+      // Geçerli ajanın konuşmalarını eklerken önceki mesajları (baseOffset'e kadar) koru
+      appState.messages = [...appState.messages.slice(0, baseOffset), ...conversations];
       broadcastState();
     },
     onScreenshot: (base64: string) => {
