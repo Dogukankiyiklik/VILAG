@@ -15,6 +15,8 @@ import {
   useSidebar,
 } from '@renderer/components/ui/sidebar';
 
+import logo from '../../../../resources/logo/icon-128.png';
+
 declare global {
   interface Window {
     vilagAPI: any;
@@ -27,13 +29,13 @@ function SidebarBrand() {
 
   return (
     <div className={`flex items-center ${isCollapsed ? 'justify-center py-3' : 'gap-2 px-2 py-3'}`}>
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-        V
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden">
+        <img src={logo} alt="VILAG Logo" className="h-full w-full object-cover" />
       </div>
       {!isCollapsed && (
         <div className="flex flex-col overflow-hidden">
           <span className="text-sm font-semibold leading-tight truncate">VILAG</span>
-          <span className="text-xs text-muted-foreground truncate">Desktop Agent</span>
+          <span className="text-xs text-muted-foreground truncate">Desktop & Browser Agent</span>
         </div>
       )}
     </div>

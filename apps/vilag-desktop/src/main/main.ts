@@ -112,6 +112,7 @@ function createMainWindow(): BrowserWindow {
     minWidth: 800,
     minHeight: 600,
     title: 'VILAG - GUI Agent',
+    icon: join(__dirname, '../../resources/icon.ico'),
     frame: false,
     titleBarStyle: 'hidden',
     webPreferences: {
@@ -297,8 +298,8 @@ async function runAgent(): Promise<void> {
     const operatorInstance =
       mode === 'browser'
         ? await DefaultBrowserOperator.getInstance(
-            settings.searchEngine as any,
-          )
+          settings.searchEngine as any,
+        )
         : new NutJSElectronOperator();
 
     // Bu çalışma için oturum loglayıcısını oluştur
@@ -448,6 +449,7 @@ function createAgent(
   systemPrompt: string,
   operatorInstance: any,
 ): GUIAgent<any> {
+  // Önceki alt görevlerin mesajlarını korumak için mevcut mesaj sayısını kaydet
   const baseOffset = appState.messages.length;
 
   return new GUIAgent({
@@ -473,7 +475,7 @@ function createAgent(
       if (!(appState.status === 'pause' && status === StatusEnum.RUNNING)) {
         appState.status = status;
       }
-      // Geçerli ajanın konuşmalarını eklerken önceki mesajları (baseOffset'e kadar) koru
+      // conversations kümülatif gelir — önceki mesajları koru, sadece bu ajanın kısmını güncelle
       appState.messages = [...appState.messages.slice(0, baseOffset), ...conversations];
       broadcastState();
     },

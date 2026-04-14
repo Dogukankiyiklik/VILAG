@@ -62,5 +62,11 @@
     },
     "engines": {
         "node": ">=20.x"
+    },
+    "build": {
+        "appId": "com.vilag.desktop",
+        "win": {
+            "icon": "resources/icon.ico"
+        }
     }
 }
