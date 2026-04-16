@@ -1,8 +1,16 @@
 {
   "id": "send-message",
   "title": "Send a Chat Message",
-  "description": "Send a direct message to a person in Teams chat",
-  "keywords": ["mesaj", "gönder", "yaz", "message", "send", "chat", "yazı", "ilet", "direct"],
+  "description": "Teams sohbetinde bir kişiye birebir mesaj gönderme akışı",
+  "keywords": [
+    "mesaj", "mesajla", "mesajlaş", "mesajını",
+    "gönder", "gonder", "yolla", "ilet", "at",
+    "yaz", "yazı", "yazıver",
+    "chat", "sohbet", "konuş", "konuşma",
+    "haber", "haberleş",
+    "dm", "direkt", "direct", "özel",
+    "message", "send", "text", "write"
+  ],
   "steps": [
     { "order": 1, "action": "Click the Chat icon on the left sidebar", "element": "Chat icon", "actionType": "click" },
     { "order": 2, "action": "Click the search or 'New chat' button at the top", "element": "New chat button", "actionType": "click" },

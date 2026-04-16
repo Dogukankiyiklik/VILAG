@@ -1,12 +1,25 @@
 {
   "id": "view-calendar",
   "title": "View Calendar",
-  "description": "View the weekly or daily calendar in Teams",
-  "keywords": ["takvim", "görüntüle", "calendar", "view", "hafta", "week", "gün", "day", "program", "schedule", "ajanda"],
+  "description": "Teams takvimini açma ve planlanmış toplantıları/etkinlikleri görüntüleme akışı",
+  "keywords": [
+    "takvim", "takvimi", "takvime", "takvimim",
+    "calendar",
+    "programı", "program", "ajanda", "agenda",
+    "görüntüle", "goruntule", "gör", "gor", "göster", "goster",
+    "aç", "ac",
+    "view", "show", "see",
+    "toplantılar", "toplantilar", "meetings",
+    "etkinlik", "etkinlikler", "events",
+    "plan", "planım", "planlarım", "planlar",
+    "bugün", "bugun", "yarın", "yarin", "hafta",
+    "listele"
+  ],
   "steps": [
     { "order": 1, "action": "Click the Calendar icon on the left sidebar", "element": "Calendar icon", "actionType": "click" },
-    { "order": 2, "action": "Use the day/week/month toggle at the top right to switch views if needed", "element": "View toggle", "actionType": "click" }
+    { "order": 2, "action": "Wait for the calendar view to load with all scheduled events", "element": "Calendar view", "actionType": "wait" },
+    { "order": 3, "action": "Optionally switch view mode using the view selector (Day, Work week, Week)", "element": "View selector", "actionType": "click" }
   ],
   "preconditions": ["Teams is open", "User is logged in"],
-  "expectedResult": "Calendar view is displayed"
+  "expectedResult": "Calendar is displayed with all upcoming meetings and events visible"
 }
