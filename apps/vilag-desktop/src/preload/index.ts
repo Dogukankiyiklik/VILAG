@@ -20,6 +20,8 @@ const api = {
   // Talimatlar ve Geçmiş
   setInstructions: (instructions: string) => ipcRenderer.invoke('setInstructions', instructions),
   clearHistory: () => ipcRenderer.invoke('clearHistory'),
+  createSession: () => ipcRenderer.invoke('createSession'),
+  selectSession: (sessionId: string) => ipcRenderer.invoke('selectSession', sessionId),
 
   // Ayarlar
   getSettings: () => ipcRenderer.invoke('getSettings'),

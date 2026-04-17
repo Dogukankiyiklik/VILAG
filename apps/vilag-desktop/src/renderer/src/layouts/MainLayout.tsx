@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, Settings, Sun, Moon, Minus, Square, X } from 'lucide-react';
+import { MessageSquare, Settings, Sun, Moon, Minus, Square, X, History } from 'lucide-react';
 
 import {
   SidebarProvider,
@@ -21,6 +21,12 @@ declare global {
   interface Window {
     vilagAPI: any;
   }
+}
+
+interface ChatSession {
+  id: string;
+  title: string;
+  updatedAt: number;
 }
 
 function SidebarBrand() {
@@ -48,7 +54,10 @@ export function MainLayout() {
 
   const isHome = location.pathname === '/' || location.pathname === '';
   const isSettings = location.pathname === '/settings';
+  const isLocal = location.pathname === '/local';
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = (localStorage.getItem('vilag-theme') as 'light' | 'dark') || 'light';
@@ -60,6 +69,19 @@ export function MainLayout() {
     }
   }, []);
 
+  useEffect(() => {
+    window.vilagAPI?.getState().then((state: any) => {
+      if (!state) return;
+      setSessions(state.sessions || []);
+      setCurrentSessionId(state.currentSessionId || null);
+    });
+
+    window.vilagAPI?.onStateUpdate((state: any) => {
+      setSessions(state.sessions || []);
+      setCurrentSessionId(state.currentSessionId || null);
+    });
+  }, []);
+
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
@@ -69,6 +91,18 @@ export function MainLayout() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+  };
+
+  const formatSessionTime = (updatedAt: number) => {
+    return new Date(updatedAt).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const handleSessionSelect = async (sessionId: string) => {
+    await window.vilagAPI?.selectSession(sessionId);
+    navigate('/local');
   };
 
   return (
@@ -126,6 +160,31 @@ export function MainLayout() {
                   <span>Home</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+            <div className="px-3 pt-3 pb-1 text-[11px] uppercase tracking-wide text-sidebar-foreground/55">
+              <div className="flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5" />
+                <span>History</span>
+              </div>
+            </div>
+            <SidebarMenu className="px-1">
+              {sessions.map((session) => (
+                <SidebarMenuItem key={session.id}>
+                  <SidebarMenuButton
+                    isActive={isLocal && currentSessionId === session.id}
+                    onClick={() => handleSessionSelect(session.id)}
+                    className="h-auto py-2"
+                  >
+                    <MessageSquare className="h-4 w-4 shrink-0" />
+                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                      <span className="truncate">{session.title || 'New Chat'}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {formatSessionTime(session.updatedAt)}
+                      </span>
+                    </span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="pb-3">

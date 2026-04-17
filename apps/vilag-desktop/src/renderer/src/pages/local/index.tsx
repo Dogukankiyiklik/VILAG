@@ -204,6 +204,17 @@ export default function LocalPage() {
     }
   };
 
+  const handleNewChat = async () => {
+    // Aktif bir çalışma varsa temiz başlangıç için önce durdur.
+    if (isRunning || isPaused || thinking) {
+      await window.vilagAPI?.stopAgent();
+    }
+    await window.vilagAPI?.createSession();
+    setInstruction('');
+    setCurrentScreenshotIndex(0);
+    setImgSize(null);
+  };
+
   const getStatusLabel = () => {
     switch (status) {
       case 'running': return 'Running';
@@ -272,7 +283,7 @@ export default function LocalPage() {
         {/* Chat panel */}
         <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 shadow-none flex flex-col min-h-0">
           <div className="flex items-center justify-between w-full px-4 mb-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleNewChat}>
               <MessageCirclePlus className="h-4 w-4" />
               New Chat
             </Button>

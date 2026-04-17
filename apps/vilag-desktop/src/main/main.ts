@@ -74,14 +74,63 @@ interface AppState {
     plannerModelName: string;
   };
   operator: OperatorMode;
+  currentSessionId: string;
+  sessions: ChatSession[];
 }
+
+interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  instructions: string;
+  messages: any[];
+  screenshots: string[];
+}
+
+function createSession(title = 'New Chat'): ChatSession {
+  const now = Date.now();
+  return {
+    id: `session-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    createdAt: now,
+    updatedAt: now,
+    instructions: '',
+    messages: [],
+    screenshots: [],
+  };
+}
+
+function getCurrentSession(): ChatSession | undefined {
+  return appState.sessions.find((session) => session.id === appState.currentSessionId);
+}
+
+function syncCurrentSessionToAppState(): void {
+  const current = getCurrentSession();
+  if (!current) return;
+  appState.instructions = current.instructions;
+  appState.messages = current.messages;
+  appState.screenshots = current.screenshots;
+}
+
+function updateCurrentSession(patch: Partial<ChatSession>): void {
+  const idx = appState.sessions.findIndex((session) => session.id === appState.currentSessionId);
+  if (idx < 0) return;
+  appState.sessions[idx] = {
+    ...appState.sessions[idx],
+    ...patch,
+    updatedAt: Date.now(),
+  };
+}
+
+const initialSession = createSession();
 
 let appState: AppState = {
   instructions: null,
   status: StatusEnum.END,
   errorMsg: null,
-  messages: [],
-  screenshots: [],
+  messages: initialSession.messages,
+  screenshots: initialSession.screenshots,
   thinking: false,
   abortController: null,
   settings: {
@@ -98,6 +147,8 @@ let appState: AppState = {
     plannerModelName: '',
   },
   operator: 'browser',
+  currentSessionId: initialSession.id,
+  sessions: [initialSession],
 };
 
 let mainWindow: BrowserWindow | null = null;
@@ -176,6 +227,39 @@ function registerIpcHandlers(): void {
   // Set instructions
   ipcMain.handle('setInstructions', (_event, instructions: string) => {
     appState.instructions = instructions;
+    const current = getCurrentSession();
+    const maybeAutoTitle =
+      current?.title === 'New Chat' || current?.title.trim() === '';
+    updateCurrentSession({
+      instructions,
+      title: maybeAutoTitle
+        ? instructions.trim().slice(0, 40) || 'New Chat'
+        : current?.title || 'New Chat',
+    });
+  });
+
+  ipcMain.handle('createSession', () => {
+    const session = createSession();
+    appState.sessions = [session, ...appState.sessions];
+    appState.currentSessionId = session.id;
+    appState.status = StatusEnum.END;
+    appState.errorMsg = null;
+    appState.thinking = false;
+    syncCurrentSessionToAppState();
+    broadcastState();
+    return session;
+  });
+
+  ipcMain.handle('selectSession', (_event, sessionId: string) => {
+    const exists = appState.sessions.some((session) => session.id === sessionId);
+    if (!exists) return null;
+    appState.currentSessionId = sessionId;
+    appState.status = StatusEnum.END;
+    appState.errorMsg = null;
+    appState.thinking = false;
+    syncCurrentSessionToAppState();
+    broadcastState();
+    return getCurrentSession();
   });
 
   // Run agent
@@ -240,6 +324,12 @@ function registerIpcHandlers(): void {
     appState.status = StatusEnum.END;
     appState.errorMsg = null;
     appState.instructions = '';
+    updateCurrentSession({
+      title: 'New Chat',
+      instructions: '',
+      messages: [],
+      screenshots: [],
+    });
     broadcastState();
   });
 
@@ -477,10 +567,12 @@ function createAgent(
       }
       // conversations kümülatif gelir — önceki mesajları koru, sadece bu ajanın kısmını güncelle
       appState.messages = [...appState.messages.slice(0, baseOffset), ...conversations];
+      updateCurrentSession({ messages: appState.messages });
       broadcastState();
     },
     onScreenshot: (base64: string) => {
       appState.screenshots.push(`data:image/png;base64,${base64}`);
+      updateCurrentSession({ screenshots: appState.screenshots });
       broadcastState();
     },
     onStepLog: (stepData: StepLogData) => {
