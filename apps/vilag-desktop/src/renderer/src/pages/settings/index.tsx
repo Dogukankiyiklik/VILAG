@@ -188,7 +188,7 @@ export default function SettingsPage() {
                   <Input
                     value={settings.plannerBaseUrl ?? ''}
                     onChange={(e) => handleSettingsChange('plannerBaseUrl', e.target.value)}
-                    placeholder="http://localhost:1234/v1 or https://api.deepseek.com/v1"
+                    placeholder="https://generativelanguage.googleapis.com/v1beta/openai/"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -198,7 +198,7 @@ export default function SettingsPage() {
                   <Input
                     value={settings.plannerApiKey ?? ''}
                     onChange={(e) => handleSettingsChange('plannerApiKey', e.target.value)}
-                    placeholder="API key (or 'lm-studio' for local)"
+                    placeholder="Gemini API key"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                   <Input
                     value={settings.plannerModelName ?? ''}
                     onChange={(e) => handleSettingsChange('plannerModelName', e.target.value)}
-                    placeholder="e.g., deepseek-chat, qwen2.5-3b, gpt-4o-mini"
+                    placeholder="e.g., gemini-2.5-flash"
                   />
                 </div>
               </div>

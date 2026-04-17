@@ -16,15 +16,19 @@
         "clean": "turbo run clean"
     },
     "devDependencies": {
-        "turbo": "^2.4.4",
         "@types/node": "^20.14.8",
         "cross-env": "^7.0.3",
         "eslint": "^8.57.0",
         "prettier": "^3.3.2",
         "rimraf": "^6.0.1",
+        "turbo": "^2.4.4",
         "typescript": "^5.7.2"
     },
     "engines": {
         "node": ">=20.x"
+    },
+    "dependencies": {
+        "bufferutil": "^4.1.0",
+        "utf-8-validate": "^6.0.6"
     }
 }

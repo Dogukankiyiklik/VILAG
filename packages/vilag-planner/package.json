@@ -16,6 +16,7 @@
     },
     "license": "Apache-2.0",
     "dependencies": {
+        "@google/genai": "^1.50.1",
         "@vilag/shared": "workspace:*",
         "openai": "^4.73.0"
     },

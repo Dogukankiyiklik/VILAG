@@ -16,11 +16,18 @@
  */
 import type { PlannerConfig, Plan, Subtask } from './types';
 import { PLANNER_SYSTEM_PROMPT } from './prompts';
+import { GoogleGenAI } from '@google/genai';
 
 function sanitizeApiKey(raw: string): string {
   let k = (raw || '').trim();
   if ((k.startsWith('"') && k.endsWith('"')) || (k.startsWith("'") && k.endsWith("'"))) {
     k = k.slice(1, -1).trim();
+  }
+  if (/^x-goog-api-key\s*:/i.test(k)) {
+    k = k.replace(/^x-goog-api-key\s*:/i, '').trim();
+  }
+  if (/^authorization\s*:/i.test(k)) {
+    k = k.replace(/^authorization\s*:/i, '').trim();
   }
   if (/^bearer\s+/i.test(k)) {
     k = k.replace(/^bearer\s+/i, '').trim();
@@ -81,6 +88,64 @@ export class Planner {
       ? `${instruction}\n\nReference steps:\n${scenarioContext}`
       : instruction;
 
+    if (this.isGemini) {
+      // Keep Gemini path simple and aligned with official SDK docs.
+      const ai = new GoogleGenAI({ apiKey: this.apiKey });
+
+      const maxAttempts = 3;
+      let contentFromNative = '';
+      let lastError: any = null;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const response = await ai.models.generateContent({
+            model: this.model,
+            config: {
+              systemInstruction: PLANNER_SYSTEM_PROMPT,
+              temperature: 0,
+              maxOutputTokens: 1024,
+            },
+            contents: userMessage,
+          } as any);
+
+          contentFromNative =
+            (response as any)?.text ||
+            (response as any)?.candidates?.[0]?.content?.parts
+              ?.map((p: any) => p?.text || '')
+              .join('\n')
+              .trim() ||
+            '';
+          break;
+        } catch (err: any) {
+          lastError = err;
+          const status = err?.status ?? err?.code;
+          const message = String(err?.message || '');
+          const retryable = status === 503 || /UNAVAILABLE|high demand/i.test(message);
+          if (!retryable || attempt === maxAttempts) {
+            break;
+          }
+          const waitMs = 1200 * attempt;
+          console.warn(`[Planner] Gemini busy (attempt ${attempt}/${maxAttempts}). Retrying in ${waitMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+      }
+
+      if (!contentFromNative) {
+        console.error('[Planner] Gemini SDK request failed');
+        console.error('[Planner] model:', this.model);
+        console.error('[Planner] apiKey:', maskKey(this.apiKey));
+        console.error('[Planner] last error:', lastError?.message || lastError);
+        throw new Error(`Planner Gemini error: ${lastError?.message || 'Unknown error'}`);
+      }
+
+      const subtasks = this.parseResponse(contentFromNative);
+      return {
+        originalInstruction: instruction,
+        subtasks,
+      };
+    }
+
+    // Non-Gemini providers: OpenAI-compatible /chat/completions path.
     const url = this.baseURL + 'chat/completions';
     const body = {
       model: this.model,
@@ -92,23 +157,14 @@ export class Planner {
       max_tokens: 1024,
     };
 
-    // Build auth headers per endpoint shape.
-    // IMPORTANT: do NOT send both Authorization and x-goog-api-key; Google rejects
-    // that combination with "Multiple authentication credentials received".
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (this.isOpenAICompat) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
-    } else {
-      headers['x-goog-api-key'] = this.apiKey;
-    }
-
     let response: Response;
     try {
       response = await fetch(url, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
         body: JSON.stringify(body),
       });
     } catch (err: any) {

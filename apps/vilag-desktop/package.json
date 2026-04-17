@@ -24,7 +24,9 @@
         "@vilag/rag": "workspace:^",
         "@vilag/sdk": "workspace:*",
         "@vilag/shared": "workspace:*",
-        "react-router-dom": "^7.1.0"
+        "bufferutil": "^4.1.0",
+        "react-router-dom": "^7.1.0",
+        "utf-8-validate": "^6.0.6"
     },
     "devDependencies": {
         "@electron-toolkit/preload": "^3.0.1",
