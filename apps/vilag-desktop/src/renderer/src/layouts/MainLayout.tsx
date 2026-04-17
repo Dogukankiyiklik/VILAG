@@ -94,10 +94,16 @@ export function MainLayout() {
   };
 
   const formatSessionTime = (updatedAt: number) => {
-    return new Date(updatedAt).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      const date = new Date(updatedAt);
+      if (Number.isNaN(date.getTime())) return '--:--';
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '--:--';
+    }
   };
 
   const handleSessionSelect = async (sessionId: string) => {

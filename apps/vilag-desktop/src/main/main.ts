@@ -101,6 +101,31 @@ function createSession(title = 'New Chat'): ChatSession {
   };
 }
 
+function normalizeSession(raw: Partial<ChatSession>): ChatSession {
+  const now = Date.now();
+  const title = typeof raw.title === 'string' ? raw.title : 'New Chat';
+  const createdAt = typeof raw.createdAt === 'number' ? raw.createdAt : now;
+  const updatedAt = typeof raw.updatedAt === 'number' ? raw.updatedAt : now;
+  return {
+    id: raw.id || `session-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    createdAt,
+    updatedAt,
+    instructions: typeof raw.instructions === 'string' ? raw.instructions : '',
+    messages: Array.isArray(raw.messages) ? raw.messages : [],
+    screenshots: Array.isArray(raw.screenshots) ? raw.screenshots : [],
+  };
+}
+
+function stopCurrentAgentIfRunning(): void {
+  appState.abortController?.abort();
+  if (currentAgent) {
+    currentAgent.resume();
+    currentAgent.stop();
+    currentAgent = null;
+  }
+}
+
 function getCurrentSession(): ChatSession | undefined {
   return appState.sessions.find((session) => session.id === appState.currentSessionId);
 }
@@ -108,9 +133,10 @@ function getCurrentSession(): ChatSession | undefined {
 function syncCurrentSessionToAppState(): void {
   const current = getCurrentSession();
   if (!current) return;
-  appState.instructions = current.instructions;
-  appState.messages = current.messages;
-  appState.screenshots = current.screenshots;
+  const safeCurrent = normalizeSession(current);
+  appState.instructions = safeCurrent.instructions;
+  appState.messages = safeCurrent.messages;
+  appState.screenshots = safeCurrent.screenshots;
 }
 
 function updateCurrentSession(patch: Partial<ChatSession>): void {
@@ -239,6 +265,7 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('createSession', () => {
+    stopCurrentAgentIfRunning();
     const session = createSession();
     appState.sessions = [session, ...appState.sessions];
     appState.currentSessionId = session.id;
@@ -251,6 +278,8 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('selectSession', (_event, sessionId: string) => {
+    stopCurrentAgentIfRunning();
+    appState.sessions = appState.sessions.map((session) => normalizeSession(session));
     const exists = appState.sessions.some((session) => session.id === sessionId);
     if (!exists) return null;
     appState.currentSessionId = sessionId;
@@ -319,6 +348,7 @@ function registerIpcHandlers(): void {
 
   // Clear history
   ipcMain.handle('clearHistory', () => {
+    stopCurrentAgentIfRunning();
     appState.messages = [];
     appState.screenshots = [];
     appState.status = StatusEnum.END;

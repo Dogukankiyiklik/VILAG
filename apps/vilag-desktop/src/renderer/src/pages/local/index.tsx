@@ -161,6 +161,7 @@ export default function LocalPage() {
         setThinking(state.thinking || false);
         setMessages(state.messages || []);
         setErrorMsg(state.errorMsg);
+        setInstruction(state.instructions || '');
       }
     });
 
@@ -169,6 +170,7 @@ export default function LocalPage() {
       setThinking(state.thinking || false);
       setMessages(state.messages || []);
       setErrorMsg(state.errorMsg);
+      setInstruction(state.instructions || '');
     });
   }, []);
 
