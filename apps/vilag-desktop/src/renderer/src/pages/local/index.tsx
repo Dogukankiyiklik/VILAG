@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { MessageCirclePlus, Square, Play, Pause, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { MessageCirclePlus, Square, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Card } from '@renderer/components/ui/card';
 import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Textarea } from '@renderer/components/ui/textarea';
-import { useSidebar } from '@renderer/components/ui/sidebar';
 
 declare global {
   interface Window {
@@ -130,7 +129,6 @@ export default function LocalPage() {
   const [instruction, setInstruction] = useState('');
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
 
-  const { state: sidebarState, toggleSidebar } = useSidebar();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -258,9 +256,6 @@ export default function LocalPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b bg-card shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleSidebar}>
-            {sidebarState === 'expanded' ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
-          </Button>
           <span className="text-sm font-medium">Local Operator</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${getStatusColor()} ${isRunning ? 'animate-pulse' : ''}`} />
