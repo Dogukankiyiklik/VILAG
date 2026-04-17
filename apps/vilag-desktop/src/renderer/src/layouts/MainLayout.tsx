@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, Settings, Sun, Moon, Minus, Square, X, History } from 'lucide-react';
+import { MessageSquare, Settings, Sun, Moon, Minus, Square, X, History, Trash2 } from 'lucide-react';
 
 import {
   SidebarProvider,
@@ -111,6 +111,13 @@ export function MainLayout() {
     navigate('/local');
   };
 
+  const handleSessionDelete = async (sessionId: string) => {
+    await window.vilagAPI?.deleteSession(sessionId);
+    if (location.pathname !== '/local') {
+      navigate('/local');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       {/* Custom Titlebar */}
@@ -176,19 +183,32 @@ export function MainLayout() {
             <SidebarMenu className="px-1">
               {sessions.map((session) => (
                 <SidebarMenuItem key={session.id}>
-                  <SidebarMenuButton
-                    isActive={isLocal && currentSessionId === session.id}
-                    onClick={() => handleSessionSelect(session.id)}
-                    className="h-auto py-2"
-                  >
-                    <MessageSquare className="h-4 w-4 shrink-0" />
-                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                      <span className="truncate">{session.title || 'New Chat'}</span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatSessionTime(session.updatedAt)}
+                  <div className="group flex items-center gap-1 rounded-md hover:bg-sidebar-accent">
+                    <SidebarMenuButton
+                      isActive={isLocal && currentSessionId === session.id}
+                      onClick={() => handleSessionSelect(session.id)}
+                      className="h-auto py-2 flex-1 hover:bg-transparent"
+                    >
+                      <MessageSquare className="h-4 w-4 shrink-0" />
+                      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                        <span className="truncate">{session.title || 'New Chat'}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {formatSessionTime(session.updatedAt)}
+                        </span>
                       </span>
-                    </span>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                    <button
+                      type="button"
+                      className="mr-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-hover:flex"
+                      title="Delete session"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleSessionDelete(session.id);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

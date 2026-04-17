@@ -4,6 +4,7 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { join } from 'path';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { GUIAgent } from '@vilag/sdk';
 import { DefaultBrowserOperator } from '@vilag/browser-operator';
 import { createLogger, createSessionLogger, type SessionLogger } from '@vilag/logger';
@@ -31,6 +32,8 @@ logger.info(`[RAG] Loaded ${retriever ? 'retriever' : 'no retriever'} with scena
 // Log dizini (proje kök dizini / logs)
 const LOGS_DIR = join(app.getAppPath(), '..', '..', 'logs');
 let currentSessionLogger: SessionLogger | null = null;
+const SESSION_STORE_FILE = 'chat-sessions.json';
+let persistTimer: NodeJS.Timeout | null = null;
 
 // HITL (Human-in-the-Loop) - Onay Yöneticisi
 const approvalManager = new ApprovalManager((request) => {
@@ -126,6 +129,62 @@ function stopCurrentAgentIfRunning(): void {
   }
 }
 
+function getSessionStorePath(): string {
+  return join(app.getPath('userData'), SESSION_STORE_FILE);
+}
+
+async function saveSessionsToDisk(): Promise<void> {
+  try {
+    const storePath = getSessionStorePath();
+    await mkdir(app.getPath('userData'), { recursive: true });
+    const payload = JSON.stringify({
+      currentSessionId: appState.currentSessionId,
+      sessions: appState.sessions,
+    });
+    await writeFile(storePath, payload, 'utf-8');
+  } catch (error) {
+    logger.error('[SessionStore] Failed to save sessions:', error);
+  }
+}
+
+function scheduleSaveSessions(): void {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void saveSessionsToDisk();
+  }, 250);
+}
+
+async function loadSessionsFromDisk(): Promise<void> {
+  try {
+    const storePath = getSessionStorePath();
+    const raw = await readFile(storePath, 'utf-8');
+    const parsed = JSON.parse(raw) as {
+      currentSessionId?: string;
+      sessions?: Partial<ChatSession>[];
+    };
+    const sessions = Array.isArray(parsed.sessions)
+      ? parsed.sessions.map((session) => normalizeSession(session))
+      : [];
+
+    if (sessions.length === 0) return;
+
+    appState.sessions = sessions;
+    const nextCurrentId = parsed.currentSessionId;
+    const hasCurrent = nextCurrentId
+      ? sessions.some((s) => s.id === nextCurrentId)
+      : false;
+    appState.currentSessionId = hasCurrent ? (nextCurrentId as string) : sessions[0].id;
+    syncCurrentSessionToAppState();
+    logger.info(`[SessionStore] Loaded ${sessions.length} sessions`);
+  } catch (error: any) {
+    // İlk açılışta dosya olmayabilir, hata loglamaya gerek yok.
+    if (error?.code !== 'ENOENT') {
+      logger.error('[SessionStore] Failed to load sessions:', error);
+    }
+  }
+}
+
 function getCurrentSession(): ChatSession | undefined {
   return appState.sessions.find((session) => session.id === appState.currentSessionId);
 }
@@ -147,6 +206,7 @@ function updateCurrentSession(patch: Partial<ChatSession>): void {
     ...patch,
     updatedAt: Date.now(),
   };
+  scheduleSaveSessions();
 }
 
 const initialSession = createSession();
@@ -274,6 +334,7 @@ function registerIpcHandlers(): void {
     appState.thinking = false;
     syncCurrentSessionToAppState();
     broadcastState();
+    scheduleSaveSessions();
     return session;
   });
 
@@ -288,7 +349,29 @@ function registerIpcHandlers(): void {
     appState.thinking = false;
     syncCurrentSessionToAppState();
     broadcastState();
+    scheduleSaveSessions();
     return getCurrentSession();
+  });
+
+  ipcMain.handle('deleteSession', (_event, sessionId: string) => {
+    stopCurrentAgentIfRunning();
+    appState.sessions = appState.sessions.filter((session) => session.id !== sessionId);
+
+    if (appState.sessions.length === 0) {
+      const fresh = createSession();
+      appState.sessions = [fresh];
+      appState.currentSessionId = fresh.id;
+    } else if (appState.currentSessionId === sessionId) {
+      appState.currentSessionId = appState.sessions[0].id;
+    }
+
+    appState.status = StatusEnum.END;
+    appState.errorMsg = null;
+    appState.thinking = false;
+    syncCurrentSessionToAppState();
+    broadcastState();
+    scheduleSaveSessions();
+    return { currentSessionId: appState.currentSessionId, sessions: appState.sessions };
   });
 
   // Run agent
@@ -361,6 +444,7 @@ function registerIpcHandlers(): void {
       screenshots: [],
     });
     broadcastState();
+    scheduleSaveSessions();
   });
 
   // HITL - Approval response from UI
@@ -731,6 +815,7 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window);
   });
 
+  await loadSessionsFromDisk();
   registerIpcHandlers();
   mainWindow = createMainWindow();
 
