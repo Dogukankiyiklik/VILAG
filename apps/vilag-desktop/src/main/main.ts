@@ -239,6 +239,30 @@ let appState: AppState = {
 
 let mainWindow: BrowserWindow | null = null;
 let currentAgent: GUIAgent<any> | null = null;
+const RUNTIME_HITL_REJECTED_ERROR = 'User rejected high-risk action';
+const RUNTIME_HITL_SKIP_SUBTASK_ERROR = 'Runtime HITL rejected - skip subtask';
+
+function shouldRequireRuntimeApproval(prediction: string, parsed: any): boolean {
+  const actionType = String(parsed?.action_type || '').toLowerCase();
+  const actionInputs = parsed?.action_inputs || {};
+  const key = String(actionInputs?.key || '').toLowerCase();
+  const context = `${prediction || ''} ${parsed?.thought || ''}`.toLowerCase();
+
+  // Enter/Return (submit) is always high-risk.
+  if (actionType === 'hotkey' && (key.includes('enter') || key.includes('return'))) {
+    return true;
+  }
+
+  // Runtime confirmation keywords for destructive/submit-like click actions.
+  const riskyIntent =
+    /submit|send|confirm|approve|delete|remove|purchase|buy|pay|checkout|place order|transfer|sign in|login/.test(context);
+
+  if ((actionType === 'click' || actionType === 'left_double' || actionType === 'right_single') && riskyIntent) {
+    return true;
+  }
+
+  return false;
+}
 
 function createMainWindow(): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -389,8 +413,13 @@ function registerIpcHandlers(): void {
       await runAgent();
     } catch (e: any) {
       logger.error('[runAgent error]', e);
-      appState.status = StatusEnum.ERROR;
-      appState.errorMsg = e.message;
+      if (e?.message === RUNTIME_HITL_REJECTED_ERROR) {
+        appState.status = StatusEnum.CALL_USER;
+        appState.errorMsg = 'High-risk action rejected. Waiting for your next instruction.';
+      } else {
+        appState.status = StatusEnum.ERROR;
+        appState.errorMsg = e.message;
+      }
     } finally {
       appState.thinking = false;
       broadcastState();
@@ -556,9 +585,14 @@ async function runDirect(
   }
   const systemPrompt = injectScenario(basePrompt, scenario);
 
-  const agent = createAgent(settings, systemPrompt, operatorInstance);
+  const agent = createAgent(settings, systemPrompt, operatorInstance, {
+    skipRuntimeApproval: false,
+  });
   currentAgent = agent;
   await agent.run(instructions);
+  if (appState.status === StatusEnum.CALL_USER) {
+    throw new Error(RUNTIME_HITL_REJECTED_ERROR);
+  }
   currentAgent = null;
 }
 
@@ -627,17 +661,38 @@ async function runWithPlanner(
       }
       const systemPrompt = injectScenario(basePrompt, scenario);
 
-      // Run agent for this subtask
-      const agent = createAgent(settings, systemPrompt, operatorInstance);
+      // Run agent for this subtask.
+      // If planner already asked approval for this subtask, skip runtime re-approval.
+      const agent = createAgent(settings, systemPrompt, operatorInstance, {
+        skipRuntimeApproval: !!subtask.requiresApproval,
+      });
       currentAgent = agent;
-      await agent.run(subtask.instruction);
-      currentAgent = null;
+      try {
+        await agent.run(subtask.instruction);
+      } finally {
+        currentAgent = null;
+      }
+      if (appState.status === StatusEnum.CALL_USER) {
+        throw new Error(RUNTIME_HITL_SKIP_SUBTASK_ERROR);
+      }
     },
     onSubtaskComplete: async (subtask: Subtask) => {
       logger.info(`[PlanExecutor] Subtask ${subtask.id} completed`);
     },
     onSubtaskError: async (subtask: Subtask, error: Error) => {
       logger.error(`[PlanExecutor] Subtask ${subtask.id} failed:`, error.message);
+      if (error.message === RUNTIME_HITL_SKIP_SUBTASK_ERROR) {
+        logger.warn(`[PlanExecutor] Subtask ${subtask.id} skipped by runtime HITL rejection`);
+        // Continue with next subtask instead of cancelling the entire plan.
+        appState.status = StatusEnum.RUNNING;
+        appState.errorMsg = null;
+        broadcastState();
+        return true;
+      }
+      if (error.message === RUNTIME_HITL_REJECTED_ERROR) {
+        logger.warn('[PlanExecutor] Stopping plan due to runtime HITL rejection');
+        return false;
+      }
       return true; // Continue to next subtask
     },
   });
@@ -652,6 +707,9 @@ function createAgent(
   settings: AppState['settings'],
   systemPrompt: string,
   operatorInstance: any,
+  options?: {
+    skipRuntimeApproval?: boolean;
+  },
 ): GUIAgent<any> {
   // Önceki alt görevlerin mesajlarını korumak için mevcut mesaj sayısını kaydet
   const baseOffset = appState.messages.length;
@@ -707,6 +765,37 @@ function createAgent(
       appState.status = StatusEnum.ERROR;
       appState.errorMsg = error?.message || 'Unknown error';
       broadcastState();
+    },
+    onBeforeExecuteAction: async ({ prediction, parsedPrediction, loopNumber, actionIndex }) => {
+      if (options?.skipRuntimeApproval) {
+        return true;
+      }
+      if (!shouldRequireRuntimeApproval(prediction, parsedPrediction)) {
+        return true;
+      }
+
+      const actionType = parsedPrediction.action_type;
+      const actionInputs = parsedPrediction.action_inputs || {};
+      const actionLabel = `${actionType}(${JSON.stringify(actionInputs)})`;
+      const approvalId = Number(`${Date.now()}`.slice(-6)) + loopNumber + actionIndex;
+
+      logger.info(`[HITL][Runtime] Approval required for action: ${actionLabel}`);
+      const approved = await approvalManager.request(
+        approvalId,
+        `Approve high-risk action: ${actionLabel}`,
+        'high',
+      );
+
+      if (!approved) {
+        logger.info(`[HITL][Runtime] Action rejected by user: ${actionLabel}`);
+        appState.status = StatusEnum.CALL_USER;
+        appState.errorMsg = 'High-risk action rejected. Agent paused for manual decision.';
+        broadcastState();
+        return false;
+      }
+
+      logger.info(`[HITL][Runtime] Action approved by user: ${actionLabel}`);
+      return true;
     },
     retry: {
       model: { maxRetries: 3 },

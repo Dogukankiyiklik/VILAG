@@ -209,7 +209,45 @@ export class GUIAgent<T extends Operator> {
         const executeStartTime = Date.now();
         const executeResults: StepLogData['executeResults'] = [];
 
-        for (const parsed of parsedPredictions) {
+        for (let actionIndex = 0; actionIndex < parsedPredictions.length; actionIndex++) {
+          const parsed = parsedPredictions[actionIndex];
+          const shouldExecute = await this.config.onBeforeExecuteAction?.({
+            prediction,
+            parsedPrediction: parsed,
+            loopNumber: loopCount,
+            actionIndex,
+            conversations: [...conversations],
+          });
+          if (shouldExecute === false) {
+            this.logger.warn('[GUIAgent] Action blocked by pre-execution guard', {
+              actionType: parsed.action_type,
+              actionInputs: parsed.action_inputs,
+            });
+            executeResults.push({
+              actionType: parsed.action_type,
+              actionInputs: parsed.action_inputs,
+              status: 'blocked',
+              error: 'Blocked by pre-execution guard',
+            });
+            this.emitStepLog(
+              loopCount,
+              base64,
+              scaleFactor,
+              screenWidth,
+              screenHeight,
+              messages,
+              prediction,
+              parsedPredictions,
+              executeResults,
+              screenshotMs,
+              modelMs,
+              Date.now() - executeStartTime,
+              Date.now() - stepStartTime,
+            );
+            this.emitData(StatusEnum.CALL_USER, conversations);
+            return;
+          }
+
           // Check for terminal actions
           if (parsed.action_type === 'finished') {
             this.logger.info('[GUIAgent] Task finished');

@@ -6,6 +6,7 @@ import type {
   GUIAgentError,
   StatusEnum,
   StepLogData,
+  Conversation,
 } from '@vilag/shared/types';
 import { UITarsModelVersion } from '@vilag/shared/constants';
 
@@ -72,6 +73,17 @@ export interface GUIAgentConfig<TOperator> {
   signal?: AbortSignal;
   onData?: (params: { data: GUIAgentData }) => void;
   onError?: (params: { data: GUIAgentData; error: GUIAgentError }) => void;
+  /**
+   * Called before executing each parsed action.
+   * Return false to block the action (e.g. runtime HITL rejection).
+   */
+  onBeforeExecuteAction?: (params: {
+    prediction: string;
+    parsedPrediction: PredictionParsed;
+    loopNumber: number;
+    actionIndex: number;
+    conversations: Conversation[];
+  }) => Promise<boolean> | boolean;
   /** Called after each loop iteration with detailed step data for debug logging */
   onStepLog?: (stepData: StepLogData) => void;
   onScreenshot?: (base64: string) => void;

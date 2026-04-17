@@ -48,6 +48,64 @@ function maskKey(k: string): string {
   return `len=${k.length} ${k.slice(0, 4)}...${k.slice(-2)}`;
 }
 
+function normalizeInstruction(text: string): string {
+  return (text || '')
+    .toLowerCase()
+    .replace(/['"`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function mentionsSubmitSearch(text: string): boolean {
+  const t = normalizeInstruction(text);
+  return (
+    (t.includes('search') && (t.includes('submit') || t.includes('magnifying glass') || t.includes('search button'))) ||
+    (t.includes('press enter') && t.includes('search'))
+  );
+}
+
+function postProcessSubtasks(subtasks: Subtask[]): Subtask[] {
+  const cleaned: Subtask[] = [];
+  let searchAlreadySubmitted = false;
+
+  for (const original of subtasks) {
+    const instruction = (original.instruction || '').trim();
+    if (!instruction) continue;
+
+    const norm = normalizeInstruction(instruction);
+    const isDuplicate = cleaned.some((s) => normalizeInstruction(s.instruction) === norm);
+    if (isDuplicate) continue;
+
+    const isEnterSubmitStep =
+      norm.includes('press enter') &&
+      (norm.includes('submit') || norm.includes('search'));
+
+    // If search submit already happened by an earlier step, skip late enter-submit step.
+    if (isEnterSubmitStep && searchAlreadySubmitted) {
+      continue;
+    }
+
+    const next: Subtask = {
+      ...original,
+      instruction,
+      riskLevel: original.riskLevel || 'low',
+      requiresApproval:
+        original.requiresApproval ??
+        (original.riskLevel === 'high' || isEnterSubmitStep),
+    };
+
+    cleaned.push(next);
+    if (mentionsSubmitSearch(instruction)) {
+      searchAlreadySubmitted = true;
+    }
+  }
+
+  return cleaned.map((task, idx) => ({
+    ...task,
+    id: idx + 1,
+  }));
+}
+
 export class Planner {
   private baseURL: string;
   private apiKey: string;
@@ -138,7 +196,7 @@ export class Planner {
         throw new Error(`Planner Gemini error: ${lastError?.message || 'Unknown error'}`);
       }
 
-      const subtasks = this.parseResponse(contentFromNative);
+      const subtasks = postProcessSubtasks(this.parseResponse(contentFromNative));
       return {
         originalInstruction: instruction,
         subtasks,
@@ -194,7 +252,7 @@ export class Planner {
     }
 
     const content: string = parsed.choices?.[0]?.message?.content ?? '';
-    const subtasks = this.parseResponse(content);
+    const subtasks = postProcessSubtasks(this.parseResponse(content));
 
     return {
       originalInstruction: instruction,
