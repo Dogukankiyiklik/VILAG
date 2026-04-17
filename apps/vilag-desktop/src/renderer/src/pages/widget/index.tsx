@@ -22,6 +22,39 @@ interface ApprovalRequest {
   riskLevel: string;
 }
 
+function getMessageText(msg: any): string {
+  if (!msg) return '';
+  if (typeof msg === 'string') return msg;
+  if (typeof msg.thought === 'string') return msg.thought;
+  if (typeof msg.value === 'string') return msg.value;
+  if (typeof msg.prediction === 'string') return msg.prediction;
+  if (typeof msg.content === 'string') return msg.content;
+  return '';
+}
+
+function getActionLabel(msg: any): string {
+  const parsedAction = msg?.predictionParsed?.action_type;
+  if (typeof parsedAction === 'string' && parsedAction.trim()) {
+    return parsedAction;
+  }
+  const text = getMessageText(msg);
+  const actionFromText = text.match(/Action:\s*([a-zA-Z_]+)/)?.[1];
+  return actionFromText || '-';
+}
+
+function compactThought(msg: any): string {
+  const thoughtFromParsed = msg?.predictionParsed?.thought;
+  const raw = typeof thoughtFromParsed === 'string' ? thoughtFromParsed : getMessageText(msg);
+  if (!raw) return 'No update yet.';
+
+  const cleaned = raw
+    .replace(/Action:\s*[\s\S]*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned || 'No update yet.';
+}
+
 export default function WidgetPage() {
   const [status, setStatus] = useState<Status>('end');
   const [thinking, setThinking] = useState(false);
@@ -136,16 +169,39 @@ export default function WidgetPage() {
           </div>
         </div>
       ) : (
-        <div className="mb-2 h-20 overflow-hidden text-[11px] text-muted-foreground">
-          {lastMessage ? (
-            <pre className="whitespace-pre-wrap font-mono">
-              {JSON.stringify(lastMessage.predictionParsed ?? lastMessage, null, 2)}
-            </pre>
-          ) : (
-            <p className="text-[11px] text-muted-foreground/60">
-              The agent&apos;s latest thoughts and actions will appear here.
-            </p>
-          )}
+        <div className="mb-2 flex min-h-0 flex-1 flex-col gap-2">
+          <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">Last Action</div>
+            <div className="mt-0.5 text-[11px] font-semibold text-foreground">
+              {getActionLabel(lastMessage)}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2 min-h-0 flex-1">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">Latest Update</div>
+            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-5">
+              {compactThought(lastMessage)}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">State</div>
+            <div className="mt-0.5 text-[11px] text-foreground">
+              {isRunning
+                ? 'Agent is executing actions.'
+                : isPaused
+                  ? 'Agent is paused.'
+                  : thinking
+                    ? 'Agent is thinking.'
+                    : 'Waiting for the next command.'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!approval && !lastMessage && (
+        <div className="mb-2 rounded-md border border-dashed border-border/80 bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground/70">
+          The agent&apos;s latest action and summary will appear here.
         </div>
       )}
 
