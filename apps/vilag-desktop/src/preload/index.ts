@@ -23,6 +23,7 @@ const api = {
   createSession: () => ipcRenderer.invoke('createSession'),
   selectSession: (sessionId: string) => ipcRenderer.invoke('selectSession', sessionId),
   deleteSession: (sessionId: string) => ipcRenderer.invoke('deleteSession', sessionId),
+  clearAllSessions: () => ipcRenderer.invoke('clearAllSessions'),
 
   // Ayarlar
   getSettings: () => ipcRenderer.invoke('getSettings'),

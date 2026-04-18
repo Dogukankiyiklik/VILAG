@@ -120,6 +120,23 @@ function normalizeSession(raw: Partial<ChatSession>): ChatSession {
   };
 }
 
+function summarizeSessionTitle(instructions: string): string {
+  const compact = instructions
+    .replace(/\s+/g, ' ')
+    .replace(/[`*_#>[\]()-]+/g, ' ')
+    .trim();
+
+  if (!compact) return 'New Chat';
+
+  const firstSentence = compact.split(/[.!?]/)[0]?.trim() || compact;
+  const words = firstSentence.split(/\s+/).filter(Boolean);
+  const shortByWords = words.slice(0, 4).join(' ');
+  const candidate = shortByWords || firstSentence;
+
+  if (candidate.length <= 26) return candidate;
+  return `${candidate.slice(0, 23).trimEnd()}...`;
+}
+
 function stopCurrentAgentIfRunning(): void {
   appState.abortController?.abort();
   if (currentAgent) {
@@ -299,6 +316,33 @@ function createMainWindow(): BrowserWindow {
   return win;
 }
 
+function loadMainRenderer(win: BrowserWindow): void {
+  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
+    win.loadURL(process.env['ELECTRON_RENDERER_URL']);
+  } else {
+    win.loadFile(join(__dirname, '../renderer/index.html'));
+  }
+}
+
+function ensureMainWindowVisible(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    mainWindow = createMainWindow();
+    return;
+  }
+
+  // If a bad hash/navigation state leaked, force main renderer route.
+  const currentUrl = mainWindow.webContents.getURL();
+  if (currentUrl.includes('#widget') || currentUrl.includes('#/widget')) {
+    loadMainRenderer(mainWindow);
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 function hideMainWindow() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.hide();
@@ -306,10 +350,7 @@ function hideMainWindow() {
 }
 
 function showMainWindow() {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    mainWindow.focus();
-  }
+  ensureMainWindowVisible();
 }
 
 // ===== IPC İşleyicileri (Arayüz - Arka Plan İletişimi) =====
@@ -343,7 +384,7 @@ function registerIpcHandlers(): void {
     updateCurrentSession({
       instructions,
       title: maybeAutoTitle
-        ? instructions.trim().slice(0, 40) || 'New Chat'
+        ? summarizeSessionTitle(instructions)
         : current?.title || 'New Chat',
     });
   });
@@ -398,6 +439,20 @@ function registerIpcHandlers(): void {
     return { currentSessionId: appState.currentSessionId, sessions: appState.sessions };
   });
 
+  ipcMain.handle('clearAllSessions', () => {
+    stopCurrentAgentIfRunning();
+    const fresh = createSession();
+    appState.sessions = [fresh];
+    appState.currentSessionId = fresh.id;
+    appState.status = StatusEnum.END;
+    appState.errorMsg = null;
+    appState.thinking = false;
+    syncCurrentSessionToAppState();
+    broadcastState();
+    scheduleSaveSessions();
+    return { currentSessionId: appState.currentSessionId, sessions: appState.sessions };
+  });
+
   // Run agent
   ipcMain.handle('runAgent', async () => {
     if (appState.thinking) return;
@@ -429,12 +484,26 @@ function registerIpcHandlers(): void {
   // Stop agent
   ipcMain.handle('stopAgent', () => {
     appState.abortController?.abort();
-    if (currentAgent) {
-      currentAgent.resume();
-      currentAgent.stop();
+    appState.abortController = null;
+    try {
+      if (currentAgent) {
+        currentAgent.resume();
+        currentAgent.stop();
+      }
+    } catch (error) {
+      logger.error('[stopAgent] Failed to stop current agent cleanly:', error);
+    } finally {
+      currentAgent = null;
+      // Ensure UI is restored immediately even if agent loop exits late.
+      afterAgentRun(appState.operator);
+      // Extra recovery pass for rare race conditions after cancellation.
+      setTimeout(() => {
+        ensureMainWindowVisible();
+      }, 150);
     }
     appState.status = StatusEnum.END;
     appState.thinking = false;
+    appState.errorMsg = null;
     broadcastState();
   });
 
@@ -562,6 +631,7 @@ async function runAgent(): Promise<void> {
       await runDirect(instructions, settings, operatorInstance, mode);
     }
   } finally {
+    appState.abortController = null;
     currentSessionLogger = null;
     afterAgentRun(mode);
   }

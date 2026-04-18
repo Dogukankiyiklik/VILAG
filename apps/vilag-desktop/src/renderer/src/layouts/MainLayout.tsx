@@ -31,6 +31,19 @@ interface ChatSession {
   updatedAt: number;
 }
 
+function compactSessionTitle(title: string): string {
+  const cleaned = (title || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return 'New Chat';
+
+  const words = cleaned.split(' ').filter(Boolean);
+  const short = words.slice(0, 4).join(' ');
+  const candidate = short || cleaned;
+  if (candidate.length <= 26) return candidate;
+  return `${candidate.slice(0, 23).trimEnd()}...`;
+}
+
 function SidebarBrand() {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
@@ -79,6 +92,7 @@ function HistoryPanel({
   isLocal,
   onSelect,
   onDelete,
+  onClearAll,
 }: {
   open: boolean;
   onClose: () => void;
@@ -87,6 +101,7 @@ function HistoryPanel({
   isLocal: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onClearAll: () => void;
 }) {
   const formatTime = (ts: number) => {
     try {
@@ -109,10 +124,11 @@ function HistoryPanel({
         <div
           className="fixed inset-0 z-30 bg-background/50 backdrop-blur-[2px]"
           onClick={onClose}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         />
       )}
       <div
-        className={`fixed top-0 left-0 z-40 h-full w-72 bg-card border-r border-border shadow-lg flex flex-col transition-transform duration-200 ease-out ${
+        className={`fixed top-9 left-0 z-40 h-[calc(100%-2.25rem)] w-72 bg-card border-r border-border shadow-lg flex flex-col transition-transform duration-200 ease-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
@@ -122,18 +138,37 @@ function HistoryPanel({
             <History className="h-4 w-4 text-muted-foreground" />
             Chat history
           </div>
-          <button
-            type="button"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          <div
+            className="flex items-center gap-1 pointer-events-auto"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
-            <X className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClearAll();
+                onClose();
+              }}
+              className="h-7 rounded-md px-2.5 flex items-center justify-center text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              title="Clear all sessions"
+            >
+              Clear all
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <ScrollArea className="flex-1">
@@ -155,6 +190,7 @@ function HistoryPanel({
                   }`}
                 >
                   <button
+                    type="button"
                     className="flex flex-1 items-center gap-2.5 px-3 py-2.5 min-w-0 text-left"
                     onClick={() => {
                       onSelect(session.id);
@@ -164,7 +200,7 @@ function HistoryPanel({
                     <MessageSquare className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-xs font-medium truncate">
-                        {session.title || 'New Chat'}
+                        {compactSessionTitle(session.title)}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {formatTime(session.updatedAt)}
@@ -172,7 +208,8 @@ function HistoryPanel({
                     </div>
                   </button>
                   <button
-                    className="mr-2 hidden h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-hover:flex transition-colors"
+                    type="button"
+                    className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive transition-colors"
                     title="Delete session"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -244,9 +281,14 @@ export function MainLayout() {
 
   const handleSessionDelete = async (sessionId: string) => {
     await window.vilagAPI?.deleteSession(sessionId);
-    if (location.pathname !== '/local') {
-      navigate('/local');
-    }
+    setHistoryOpen(false);
+    navigate('/local', { replace: true });
+  };
+
+  const handleClearAllSessions = async () => {
+    await window.vilagAPI?.clearAllSessions();
+    setHistoryOpen(false);
+    navigate('/local', { replace: true });
   };
 
   return (
@@ -343,6 +385,7 @@ export function MainLayout() {
         isLocal={isLocal}
         onSelect={handleSessionSelect}
         onDelete={handleSessionDelete}
+        onClearAll={handleClearAllSessions}
       />
     </div>
   );
