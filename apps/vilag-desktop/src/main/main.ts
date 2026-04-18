@@ -237,9 +237,9 @@ let appState: AppState = {
   thinking: false,
   abortController: null,
   settings: {
-    vlmBaseUrl: 'http://localhost:1234/v1',
+    vlmBaseUrl: 'https://nonsynesthetic-letty-nonparasitically.ngrok-free.dev/v1/',
     vlmApiKey: 'lm-studio',
-    vlmModelName: '',
+    vlmModelName: 'UI-TARS-1.5 7B',
     maxLoopCount: 25,
     language: 'en',
     searchEngine: 'google',
