@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pause, Play, Square, Check, X } from 'lucide-react';
+import { Button } from '@renderer/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
 
 declare global {
   interface Window {
@@ -129,43 +131,46 @@ export default function WidgetPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col rounded-xl border border-border bg-card/95 backdrop-blur-sm p-3 text-xs text-card-foreground">
+    <div className="flex h-full w-full flex-col rounded-xl border border-border/80 bg-card/95 p-3 text-xs text-card-foreground shadow-sm backdrop-blur-sm">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[11px] font-semibold tracking-tight text-foreground">
           VILAG Agent
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground">
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${getStatusDot()}`} />
           {getStatusLabel()}
         </span>
       </div>
 
       {approval ? (
-        <div className="mb-2 flex flex-col gap-2 rounded-lg border border-chart-4/30 bg-chart-4/5 p-2.5">
-          <div className="text-[11px] font-semibold text-foreground">
-            Approval Required
-          </div>
-          <div className="text-[11px] text-muted-foreground leading-relaxed">
-            {approval.description}
-          </div>
-          <div className="text-[10px] text-muted-foreground/70">
-            Risk: {approval.riskLevel}
+        <div className="mb-2 flex flex-col gap-2">
+          <Alert className="border-primary/20 bg-primary/5 px-3 py-2.5">
+            <AlertTitle className="text-[11px]">Approval Required</AlertTitle>
+            <AlertDescription className="text-[11px] leading-relaxed">
+              {approval.description}
+            </AlertDescription>
+          </Alert>
+          <div className="inline-flex w-fit items-center rounded-full border border-border/70 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+            Risk: <span className="ml-1 font-medium text-foreground">{approval.riskLevel}</span>
           </div>
           <div className="flex gap-2 pt-1">
-            <button
-              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-primary/30 bg-primary/10 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
+            <Button
+              size="sm"
+              className="h-8 flex-1 text-[11px]"
               onClick={handleApprove}
             >
               <Check className="h-3 w-3" />
               Approve
-            </button>
-            <button
-              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 py-1.5 text-[11px] font-medium text-destructive hover:bg-destructive/20 transition-colors"
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-8 flex-1 text-[11px]"
               onClick={handleReject}
             >
               <X className="h-3 w-3" />
               Reject
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -206,20 +211,24 @@ export default function WidgetPage() {
       )}
 
       <div className="mt-auto flex justify-end gap-2 pt-2 border-t border-border/60">
-        <button
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40 transition-colors"
+        <Button
+          size="icon"
+          variant="outline"
+          className="size-7 text-muted-foreground"
           onClick={handlePlayPause}
           disabled={(!isRunning && !isPaused) || !!approval}
         >
           {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-        </button>
-        <button
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-destructive/30 bg-card text-destructive hover:bg-destructive/10 disabled:opacity-40 transition-colors"
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          className="size-7 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={handleStop}
           disabled={!isRunning && !isPaused && !approval}
         >
           <Square className="h-3 w-3" />
-        </button>
+        </Button>
       </div>
     </div>
   );
