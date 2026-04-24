@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { MessageCirclePlus, Square, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  MessageCirclePlus,
+  Square,
+  Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
+  Mic,
+  MicOff,
+} from 'lucide-react';
 
 import { Card } from '@renderer/components/ui/card';
 import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Textarea } from '@renderer/components/ui/textarea';
+import { useDictation } from '@renderer/hooks/useDictation';
+
+type DictationLang = 'tr-TR' | 'en-US';
 
 declare global {
   interface Window {
@@ -128,9 +140,38 @@ export default function LocalPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
+  const [dictationLang, setDictationLang] = useState<DictationLang>('tr-TR');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  const handleFinalSpeech = useCallback((text: string) => {
+    setInstruction((prev) => {
+      const trimmed = prev.trimEnd();
+      if (!trimmed) return text;
+      const needsSpace = !/[\s]$/.test(prev);
+      return `${prev}${needsSpace ? ' ' : ''}${text}`;
+    });
+  }, []);
+
+  const {
+    engine: sttEngine,
+    isSupported: isSTTSupported,
+    isListening,
+    isTranscribing,
+    isModelLoading,
+    modelProgress,
+    interimTranscript,
+    error: sttError,
+    engineNotice,
+    toggle: toggleDictation,
+    stop: stopDictation,
+    reset: resetDictation,
+  } = useDictation({
+    lang: dictationLang,
+    preferredEngine: 'auto',
+    onFinalResult: handleFinalSpeech,
+  });
 
   const screenshots = useMemo(() => {
     return messages
@@ -188,6 +229,7 @@ export default function LocalPage() {
 
   const handleRun = async () => {
     if (!instruction.trim()) return;
+    if (isListening) stopDictation();
     await window.vilagAPI?.setInstructions(instruction.trim());
     await window.vilagAPI?.runAgent();
   };
@@ -209,6 +251,8 @@ export default function LocalPage() {
     if (isRunning || isPaused || thinking) {
       await window.vilagAPI?.stopAgent();
     }
+    if (isListening) stopDictation();
+    resetDictation();
     await window.vilagAPI?.createSession();
     setInstruction('');
     setCurrentScreenshotIndex(0);
@@ -329,19 +373,112 @@ export default function LocalPage() {
               )}
             </div>
           </ScrollArea>
-          <div className="px-4 pt-2">
-            <Textarea
-              placeholder="What can I do for you today?"
-              value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              disabled={thinking}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  handleRun();
+          <div className="px-4 pt-2 space-y-2">
+            <div className="relative">
+              <Textarea
+                placeholder={
+                  isListening
+                    ? dictationLang === 'tr-TR'
+                      ? 'Dinleniyor... konuşun'
+                      : 'Listening... speak now'
+                    : 'What can I do for you today?'
                 }
-              }}
-            />
+                value={instruction}
+                onChange={(e) => setInstruction(e.target.value)}
+                disabled={thinking}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    handleRun();
+                  }
+                }}
+                className="pr-12"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant={isListening ? 'default' : 'outline'}
+                onClick={toggleDictation}
+                disabled={!isSTTSupported || thinking || isTranscribing || isModelLoading}
+                title={
+                  !isSTTSupported
+                    ? 'Sesli dikte bu ortamda desteklenmiyor'
+                    : isListening
+                      ? 'Dinlemeyi durdur'
+                      : isModelLoading
+                        ? `Model yükleniyor (%${Math.round(modelProgress)})`
+                        : isTranscribing
+                          ? 'Transkribe ediliyor...'
+                          : `Sesli dikte başlat (${sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'})`
+                }
+                className={`absolute right-2 bottom-2 h-8 w-8 ${isListening ? 'animate-pulse' : ''}`}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="inline-flex rounded-md border bg-muted/40 p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setDictationLang('tr-TR')}
+                  className={`px-2 py-0.5 rounded-sm transition-colors ${
+                    dictationLang === 'tr-TR'
+                      ? 'bg-background shadow-sm font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  aria-pressed={dictationLang === 'tr-TR'}
+                >
+                  TR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDictationLang('en-US')}
+                  className={`px-2 py-0.5 rounded-sm transition-colors ${
+                    dictationLang === 'en-US'
+                      ? 'bg-background shadow-sm font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  aria-pressed={dictationLang === 'en-US'}
+                >
+                  EN
+                </button>
+              </div>
+
+              <div className="flex-1 min-w-0 text-[11px] text-muted-foreground truncate">
+                {sttError ? (
+                  <span className="text-destructive">{sttError}</span>
+                ) : isModelLoading ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    Whisper modeli indiriliyor... %{Math.round(modelProgress)}
+                  </span>
+                ) : isTranscribing ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    {dictationLang === 'tr-TR' ? 'Metne dönüştürülüyor...' : 'Transcribing...'}
+                  </span>
+                ) : isListening && interimTranscript ? (
+                  <span className="italic">{interimTranscript}</span>
+                ) : isListening ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                    {dictationLang === 'tr-TR' ? 'Dinleniyor' : 'Listening'}
+                    <span className="text-muted-foreground/60">
+                      · {sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'}
+                    </span>
+                  </span>
+                ) : engineNotice ? (
+                  <span className="text-muted-foreground/80">{engineNotice}</span>
+                ) : !isSTTSupported ? (
+                  <span>Sesli dikte bu ortamda desteklenmiyor.</span>
+                ) : (
+                  <span className="text-muted-foreground/60">
+                    {sttEngine === 'whisper' ? 'Whisper (yerel)' : 'Web Speech'} · hazır
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </Card>
 

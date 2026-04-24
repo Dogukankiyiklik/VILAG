@@ -4,7 +4,7 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { join } from 'path';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readFile, writeFile, rename, unlink } from 'fs/promises';
 import { GUIAgent } from '@vilag/sdk';
 import { DefaultBrowserOperator } from '@vilag/browser-operator';
 import { createLogger, createSessionLogger, type SessionLogger } from '@vilag/logger';
@@ -157,12 +157,16 @@ function getSessionStorePath(): string {
 async function saveSessionsToDisk(): Promise<void> {
   try {
     const storePath = getSessionStorePath();
+    const tmpPath = `${storePath}.tmp`;
     await mkdir(app.getPath('userData'), { recursive: true });
     const payload = JSON.stringify({
       currentSessionId: appState.currentSessionId,
       sessions: appState.sessions,
     });
-    await writeFile(storePath, payload, 'utf-8');
+    // Atomic write: önce .tmp dosyasına yaz, sonra rename ile taşı.
+    // Böylece yazma sırasında çökme olursa mevcut dosya bozulmaz.
+    await writeFile(tmpPath, payload, 'utf-8');
+    await rename(tmpPath, storePath);
   } catch (error) {
     logger.error('[SessionStore] Failed to save sessions:', error);
   }
@@ -177,33 +181,63 @@ function scheduleSaveSessions(): void {
 }
 
 async function loadSessionsFromDisk(): Promise<void> {
+  const storePath = getSessionStorePath();
+  let raw: string;
   try {
-    const storePath = getSessionStorePath();
-    const raw = await readFile(storePath, 'utf-8');
-    const parsed = JSON.parse(raw) as {
-      currentSessionId?: string;
-      sessions?: Partial<ChatSession>[];
-    };
-    const sessions = Array.isArray(parsed.sessions)
-      ? parsed.sessions.map((session) => normalizeSession(session))
-      : [];
-
-    if (sessions.length === 0) return;
-
-    appState.sessions = sessions;
-    const nextCurrentId = parsed.currentSessionId;
-    const hasCurrent = nextCurrentId
-      ? sessions.some((s) => s.id === nextCurrentId)
-      : false;
-    appState.currentSessionId = hasCurrent ? (nextCurrentId as string) : sessions[0].id;
-    syncCurrentSessionToAppState();
-    logger.info(`[SessionStore] Loaded ${sessions.length} sessions`);
+    raw = await readFile(storePath, 'utf-8');
   } catch (error: any) {
-    // İlk açılışta dosya olmayabilir, hata loglamaya gerek yok.
+    // İlk açılışta dosya olmayabilir; bu normal, sessizce çık.
     if (error?.code !== 'ENOENT') {
-      logger.error('[SessionStore] Failed to load sessions:', error);
+      logger.error('[SessionStore] Failed to read session file:', error);
     }
+    return;
   }
+
+  // Boş veya yalnızca whitespace içeren dosyayı parse etme — önceki
+  // çalıştırmadan yarım yazılmış olabilir. Sessizce temizle.
+  if (!raw || !raw.trim()) {
+    try {
+      await unlink(storePath);
+    } catch {
+      // noop
+    }
+    return;
+  }
+
+  let parsed: { currentSessionId?: string; sessions?: Partial<ChatSession>[] };
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    // Bozuk JSON → bozuk dosyayı .bak olarak yedekle ve sıfırla.
+    // Böylece bir sonraki save temiz dosya üretebilir.
+    logger.error('[SessionStore] Corrupted session file, resetting:', error);
+    try {
+      await rename(storePath, `${storePath}.bak`);
+    } catch (renameErr) {
+      logger.warn('[SessionStore] Failed to backup corrupted session file:', renameErr);
+      try {
+        await unlink(storePath);
+      } catch {
+        // noop
+      }
+    }
+    return;
+  }
+
+  const sessions = Array.isArray(parsed.sessions)
+    ? parsed.sessions.map((session) => normalizeSession(session))
+    : [];
+
+  if (sessions.length === 0) return;
+
+  appState.sessions = sessions;
+  const nextCurrentId = parsed.currentSessionId;
+  const hasCurrent = nextCurrentId
+    ? sessions.some((s) => s.id === nextCurrentId)
+    : false;
+  appState.currentSessionId = hasCurrent ? (nextCurrentId as string) : sessions[0].id;
+  syncCurrentSessionToAppState();
+  logger.info(`[SessionStore] Loaded ${sessions.length} sessions`);
 }
 
 function getCurrentSession(): ChatSession | undefined {
