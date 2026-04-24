@@ -241,7 +241,7 @@ let appState: AppState = {
   settings: {
     vlmBaseUrl: 'https://nonsynesthetic-letty-nonparasitically.ngrok-free.dev/v1/',
     vlmApiKey: 'lm-studio',
-    vlmModelName: 'UI-TARS-1.5 7B',
+    vlmModelName: '',
     maxLoopCount: 25,
     language: 'en',
     searchEngine: 'google',
@@ -609,6 +609,8 @@ async function runAgent(): Promise<void> {
         )
         : new NutJSElectronOperator();
 
+    await warmupOperator(mode, operatorInstance);
+
     // Bu çalışma için oturum loglayıcısını oluştur
     const sessionId = `vilag-${Date.now()}`;
     currentSessionLogger = createSessionLogger(LOGS_DIR, sessionId);
@@ -880,6 +882,17 @@ function createAgent(
   });
 }
 
+async function warmupOperator(mode: OperatorMode, operatorInstance: any): Promise<void> {
+  if (mode !== 'browser') return;
+  try {
+    // Force an initial screenshot after startup so first decision uses a settled page.
+    await operatorInstance.screenshot();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } catch (e) {
+    logger.warn('[runAgent] Browser warmup failed, continuing anyway:', e);
+  }
+}
+
 function beforeAgentRun(operator: OperatorMode): void {
   hideMainWindow();
   showWidgetWindow();
@@ -928,8 +941,12 @@ call_user()
 `;
   }
 
-  // Browser modu prompt'u
-  return `You are a browser GUI agent. You control a web browser to complete tasks. You see screenshots of the browser viewport and perform actions to navigate and interact with web pages.
+  // Browser mode prompt (short v2)
+  return `You are a browser GUI agent. You control a web browser to complete tasks from screenshots.
+
+## Context
+- Browser starts on Microsoft Teams (https://teams.microsoft.com).
+- Session is usually already authenticated.
 
 ## Output Format
 \`\`\`
@@ -944,6 +961,7 @@ left_double(start_box='<|box_start|>(x1,y1)<|box_end|>')
 right_single(start_box='<|box_start|>(x1,y1)<|box_end|>')
 drag(start_box='<|box_start|>(x1,y1)<|box_end|>', end_box='<|box_start|>(x3,y3)<|box_end|>')
 hotkey(key='ctrl c')
+hotkey(key='ctrl v')
 type(content='xxx')
 scroll(start_box='<|box_start|>(x1,y1)<|box_end|>', direction='down or up or right or left')
 navigate(content='xxx')
@@ -955,6 +973,12 @@ call_user()
 ## Note
 - Use ${lang} in \`Thought\` part.
 - Summarize your next action in one sentence in \`Thought\` part.
+- If the UI is loading (blank/splash/spinner), use \`wait()\`.
+- If Teams is already open and signed in, do NOT re-open Teams or start login.
+- For Teams tasks, operate from the current Teams UI first.
+- Use \`navigate(content='...')\` only if the task explicitly requires another site.
+- If you repeat a similar action twice without visible progress, change strategy.
+- When you need to paste copied content (e.g., a meeting link), use \`hotkey(key='ctrl v')\`.
 
 ## User Instruction
 `;

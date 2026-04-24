@@ -68,6 +68,8 @@ export class BrowserOperator implements Operator {
       // Navigate to search engine or start URL
       const startUrl = this.options.startUrl || this.getSearchEngineUrl();
       await this.currentPage.goto(startUrl, { waitUntil: 'domcontentloaded' }).catch(() => { });
+      await this.currentPage.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => { });
+      await sleep(700);
     }
 
     // Get the most recent page

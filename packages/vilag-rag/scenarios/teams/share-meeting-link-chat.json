@@ -1,0 +1,23 @@
+{
+  "id": "share-meeting-link-chat",
+  "title": "Create Meeting Link and Share in Chat",
+  "description": "Teams Meet ekranında toplantı linki oluşturup belirli bir kişiye sohbette gönderme akışı",
+  "keywords": [
+    "meeting link", "meet link", "link", "invite link", "meeting invite",
+    "create link", "generate link", "copy link", "create and copy link",
+    "meet", "meeting", "teams meet", "instant meeting",
+    "share", "send link", "forward link", "paste", "ctrl v",
+    "chat", "sohbet", "message", "send", "dm", "direct message",
+    "kişiye gönder", "chatte gönder", "sohbete gönder"
+  ],
+  "steps": [
+    { "order": 1, "action": "Click the Meet section in the left sidebar", "element": "Meet navigation item", "actionType": "click" },
+    { "order": 2, "action": "Click 'Create a meeting link' (or equivalent)", "element": "Create meeting link button", "actionType": "click" },
+    { "order": 3, "action": "Click 'Create and copy link' to copy the invitation URL", "element": "Create and copy link button", "actionType": "click" },
+    { "order": 4, "action": "Go to Chat and open the target person's conversation", "element": "Chat item and person result", "actionType": "click" },
+    { "order": 5, "action": "Focus the message input and paste the copied link with Ctrl+V", "element": "Message input", "actionType": "hotkey" },
+    { "order": 6, "action": "Send the message (Enter or Send button)", "element": "Send action", "actionType": "click" }
+  ],
+  "preconditions": ["Teams is open", "User is logged in"],
+  "expectedResult": "Meeting link is created and sent to the selected person in chat"
+}
