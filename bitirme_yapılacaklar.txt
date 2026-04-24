@@ -1,0 +1,10 @@
+Backend:
+	* HITL'i daha sağlam hale getir.
+		-> Session'ların mantığı olmalı. Örneğin o session iptal oldu diyelim. Ben chat ekranına bir şey yazarsam öcneki mesajlardaki duruma bakmalı, yapılmış planlardan işleme devam etmeli. Session iptal edildi ve ben devam et deyince planlayıcı tekrardan çalıştı ve sıfırdan saçma bir şey yaptı. UI-Tars'ın düşüncesinde şunu gördüm; I have already type Kuzu Kuzu… gibi bir şey yazıyordu. Yani UI-Tars geçmişi alıyor ama session'da da bunu ayarlamak lazım.
+		-> HITL'de o alt görevi kabul etmezsem onu atlayıp bunu da ajana bildirmek lazım. Örneğin birisine mesaj gönder dedim. Her bir adımı yaptı en son mesaj gönderme yerine geldi ve HITL çıktı diyelim. Ben hayır dersem bir sonraki alt göreve geçsin o mesajı göndermesin yani enter'a basmasın. Model bas dese de o engellenmeli. Ama şu sorun olabilir; örneğin o görevi yapam dedim ama bir sonraki alt görev için o iptal ettiğim görevin kesin yapılmış olması gerekebilir. Ahmet'e mesaj at ve takvimden X günü belirle dedim. Alt planlar yapıldı diyelim. Sonra ajan uygulamaya koydu. Tam Ahmet'e mesaj atmadan bana onay verip vermediğimi sorması lazım. O anda ben hayır dersem Ahmet'e mesaj göndermeyecek ama takvimi de açması lazım; yani devam etmeli. Ama Ahmet'e mesaj göndermeden bir sonraki adımı göremeyecekse ajan orada ek bir katman sağlayıp; bir öneki olayı yapmadan bu işe devam edemem şeklinde bir hata, uyarı vermesi lazım. Bu işi kotarmak lazım; en mantıklı orta yolu bul.
+		-> Orta olarak belirlenen risk seviyelerinde kullanıcıya bir bilgi bastırsın; bu orta risk seviyesi uyguluyorum ama haberin olsun desin. Yani kullanıcıdan onay istemeycek ama kullanıcıya bildirsin özellikle. Belki bir pop-up falan çıkartabilirim. Eğer düşükse risk zaten direkt devam edecek.
+		-> HITL mekanizması planlayıcı yokken de çalışıyor. Belki de bunu iptal etmek daha mantıklı olur. Çünkü HITL'de  o alt planı atlamasını isteyeceğiz. Ama planlayıcı yokken alt planda yoktur zaten.
+	
+	* Raporu oku ve eksik varsa tamamlamaları yap.
+	* Testleri koda ekle ve her şeyin birim testini vb. yap.
+	* TR/EN seçeneklerini düzenle. TR çalışmıyor.
