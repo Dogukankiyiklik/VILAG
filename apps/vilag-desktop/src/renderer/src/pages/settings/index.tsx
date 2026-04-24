@@ -18,6 +18,7 @@ interface SettingsState {
   maxLoopCount: number;
   language: 'en' | 'tr';
   searchEngine: string;
+  browserStartUrl?: string;
   plannerEnabled: boolean;
   plannerBaseUrl: string;
   plannerApiKey: string;
@@ -147,6 +148,16 @@ export default function SettingsPage() {
                 <option value="en">English (Default)</option>
                 <option value="tr">Türkçe</option>
               </select>
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                Browser Start URL
+              </label>
+              <Input
+                value={settings.browserStartUrl ?? ''}
+                onChange={(e) => handleSettingsChange('browserStartUrl', e.target.value)}
+                placeholder="https://teams.microsoft.com"
+              />
             </div>
           </CardContent>
         </Card>

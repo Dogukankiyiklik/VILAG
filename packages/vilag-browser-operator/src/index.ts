@@ -4,7 +4,7 @@
  * Playwright-based browser operator that implements the Operator interface.
  * Handles screenshot, click, type, scroll, hotkey, navigate, drag.
  */
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { chromium, type BrowserContext, type Page } from 'playwright';
 import { StatusEnum } from '@vilag/shared/types';
 import { sleep } from '@vilag/shared/utils';
 import type { Operator, ExecuteParams, ExecuteOutput, ScreenshotOutput } from '@vilag/sdk/core';
@@ -15,6 +15,7 @@ export interface BrowserOperatorOptions {
   headless?: boolean;
   searchEngine?: SearchEngine;
   startUrl?: string;
+  userDataDir?: string;
 }
 
 export class BrowserOperator implements Operator {
@@ -35,7 +36,6 @@ export class BrowserOperator implements Operator {
     ],
   };
 
-  private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private currentPage: Page | null = null;
 
@@ -45,15 +45,25 @@ export class BrowserOperator implements Operator {
    * Launch browser if not already running, return active page.
    */
   async getActivePage(): Promise<Page> {
-    if (!this.browser) {
-      this.browser = await chromium.launch({
-        headless: this.options.headless ?? false,
-        args: ['--disable-blink-features=AutomationControlled'],
-      });
-      this.context = await this.browser.newContext({
-        viewport: { width: 1280, height: 720 },
-      });
-      this.currentPage = await this.context.newPage();
+    if (!this.context) {
+      if (this.options.userDataDir) {
+        this.context = await chromium.launchPersistentContext(this.options.userDataDir, {
+          headless: this.options.headless ?? false,
+          args: ['--disable-blink-features=AutomationControlled'],
+          viewport: { width: 1280, height: 720 },
+        });
+        const pages = this.context.pages();
+        this.currentPage = pages.length > 0 ? pages[pages.length - 1] : await this.context.newPage();
+      } else {
+        const browser = await chromium.launch({
+          headless: this.options.headless ?? false,
+          args: ['--disable-blink-features=AutomationControlled'],
+        });
+        this.context = await browser.newContext({
+          viewport: { width: 1280, height: 720 },
+        });
+        this.currentPage = await this.context.newPage();
+      }
 
       // Navigate to search engine or start URL
       const startUrl = this.options.startUrl || this.getSearchEngineUrl();
@@ -281,9 +291,8 @@ export class BrowserOperator implements Operator {
    * Cleanup - close browser
    */
   async cleanup(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close().catch(() => { });
-      this.browser = null;
+    if (this.context) {
+      await this.context.close().catch(() => { });
       this.context = null;
       this.currentPage = null;
     }
@@ -299,12 +308,14 @@ export class DefaultBrowserOperator extends BrowserOperator {
   static async getInstance(
     searchEngine: SearchEngine = 'google',
     startUrl?: string,
+    userDataDir?: string,
   ): Promise<DefaultBrowserOperator> {
     if (!DefaultBrowserOperator.instance) {
       DefaultBrowserOperator.instance = new DefaultBrowserOperator({
         headless: false,
         searchEngine,
         startUrl,
+        userDataDir,
       });
     }
     return DefaultBrowserOperator.instance;

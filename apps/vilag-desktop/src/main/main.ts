@@ -31,6 +31,7 @@ logger.info(`[RAG] Loaded ${retriever ? 'retriever' : 'no retriever'} with scena
 
 // Log dizini (proje kök dizini / logs)
 const LOGS_DIR = join(app.getAppPath(), '..', '..', 'logs');
+const BROWSER_PROFILE_DIR = join(app.getPath('userData'), 'playwright-browser-profile');
 let currentSessionLogger: SessionLogger | null = null;
 const SESSION_STORE_FILE = 'chat-sessions.json';
 let persistTimer: NodeJS.Timeout | null = null;
@@ -70,6 +71,7 @@ interface AppState {
     maxLoopCount: number;
     language: 'en' | 'tr';
     searchEngine: string;
+    browserStartUrl?: string;
     operator: OperatorMode;
     plannerEnabled: boolean;
     plannerBaseUrl: string;
@@ -243,6 +245,7 @@ let appState: AppState = {
     maxLoopCount: 25,
     language: 'en',
     searchEngine: 'google',
+    browserStartUrl: 'https://teams.microsoft.com',
     operator: 'browser',
     plannerEnabled: false,
     plannerBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
@@ -601,6 +604,8 @@ async function runAgent(): Promise<void> {
       mode === 'browser'
         ? await DefaultBrowserOperator.getInstance(
           settings.searchEngine as any,
+          settings.browserStartUrl?.trim() || undefined,
+          BROWSER_PROFILE_DIR,
         )
         : new NutJSElectronOperator();
 
