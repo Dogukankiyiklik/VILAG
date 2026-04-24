@@ -17,6 +17,19 @@ import { Textarea } from '@renderer/components/ui/textarea';
 import { useDictation } from '@renderer/hooks/useDictation';
 
 type DictationLang = 'tr-TR' | 'en-US';
+type DictationQuality = 'fast' | 'balanced' | 'accurate';
+
+const WHISPER_MODEL_BY_QUALITY: Record<DictationQuality, string> = {
+  fast: 'Xenova/whisper-tiny',
+  balanced: 'Xenova/whisper-base',
+  accurate: 'Xenova/whisper-small',
+};
+
+const QUALITY_LABELS: Record<DictationQuality, string> = {
+  fast: 'Hızlı',
+  balanced: 'Dengeli',
+  accurate: 'Doğru',
+};
 
 declare global {
   interface Window {
@@ -141,6 +154,7 @@ export default function LocalPage() {
   const [instruction, setInstruction] = useState('');
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [dictationLang, setDictationLang] = useState<DictationLang>('tr-TR');
+  const [dictationQuality, setDictationQuality] = useState<DictationQuality>('balanced');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -170,6 +184,7 @@ export default function LocalPage() {
   } = useDictation({
     lang: dictationLang,
     preferredEngine: 'auto',
+    whisperModel: WHISPER_MODEL_BY_QUALITY[dictationQuality],
     onFinalResult: handleFinalSpeech,
   });
 
@@ -418,31 +433,59 @@ export default function LocalPage() {
             </div>
 
             <div className="flex items-center justify-between gap-2">
-              <div className="inline-flex rounded-md border bg-muted/40 p-0.5 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setDictationLang('tr-TR')}
-                  className={`px-2 py-0.5 rounded-sm transition-colors ${
-                    dictationLang === 'tr-TR'
-                      ? 'bg-background shadow-sm font-medium'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  aria-pressed={dictationLang === 'tr-TR'}
-                >
-                  TR
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDictationLang('en-US')}
-                  className={`px-2 py-0.5 rounded-sm transition-colors ${
-                    dictationLang === 'en-US'
-                      ? 'bg-background shadow-sm font-medium'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  aria-pressed={dictationLang === 'en-US'}
-                >
-                  EN
-                </button>
+              <div className="flex items-center gap-1.5">
+                <div className="inline-flex rounded-md border bg-muted/40 p-0.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setDictationLang('tr-TR')}
+                    className={`px-2 py-0.5 rounded-sm transition-colors ${
+                      dictationLang === 'tr-TR'
+                        ? 'bg-background shadow-sm font-medium'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    aria-pressed={dictationLang === 'tr-TR'}
+                  >
+                    TR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDictationLang('en-US')}
+                    className={`px-2 py-0.5 rounded-sm transition-colors ${
+                      dictationLang === 'en-US'
+                        ? 'bg-background shadow-sm font-medium'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    aria-pressed={dictationLang === 'en-US'}
+                  >
+                    EN
+                  </button>
+                </div>
+
+                <div className="inline-flex rounded-md border bg-muted/40 p-0.5 text-[11px]">
+                  {(['fast', 'balanced', 'accurate'] as DictationQuality[]).map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setDictationQuality(q)}
+                      disabled={isListening || isTranscribing || isModelLoading}
+                      title={
+                        q === 'fast'
+                          ? 'Hızlı (tiny, ~40MB) — az doğru'
+                          : q === 'balanced'
+                            ? 'Dengeli (base, ~140MB) — önerilen'
+                            : 'Doğru (small, ~470MB) — en iyi doğruluk'
+                      }
+                      className={`px-2 py-0.5 rounded-sm transition-colors disabled:opacity-40 ${
+                        dictationQuality === q
+                          ? 'bg-background shadow-sm font-medium'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                      aria-pressed={dictationQuality === q}
+                    >
+                      {QUALITY_LABELS[q]}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex-1 min-w-0 text-[11px] text-muted-foreground truncate">

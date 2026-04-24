@@ -23,6 +23,13 @@ export interface UseDictationOptions {
   lang?: string;
   /** Tercih edilen motor. 'auto' (varsayılan) → web-speech → whisper fallback. */
   preferredEngine?: 'auto' | DictationEngine;
+  /**
+   * Whisper modelinin HuggingFace adı. Kalite/hız dengesini kontrol eder.
+   * Örn: 'Xenova/whisper-tiny' (~40MB, hızlı, zayıf),
+   *       'Xenova/whisper-base' (~140MB, dengeli — varsayılan),
+   *       'Xenova/whisper-small' (~470MB, daha doğru).
+   */
+  whisperModel?: string;
   /** Ara (henüz kesinleşmemiş) metin. Yalnızca web-speech motorunda üretilir. */
   onInterimResult?: (transcript: string) => void;
   /** Her kesinleşmiş metin parçası için çağrılır. */
@@ -70,6 +77,7 @@ export function useDictation(options: UseDictationOptions = {}): UseDictationRet
   const {
     lang = 'tr-TR',
     preferredEngine = 'auto',
+    whisperModel,
     onInterimResult,
     onFinalResult,
   } = options;
@@ -90,6 +98,7 @@ export function useDictation(options: UseDictationOptions = {}): UseDictationRet
 
   const whisper = useWhisperSTT({
     lang,
+    model: whisperModel,
     onFinalResult,
   });
 

@@ -16,8 +16,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * (~40 MB / whisper-tiny) ve sonrasında offline çalışır.
  */
 
-// Varsayılan model; daha iyi doğruluk için 'Xenova/whisper-base' (~140MB) tercih edilebilir.
-const DEFAULT_MODEL = 'Xenova/whisper-tiny';
+// Varsayılan: `whisper-base` (~140 MB). Türkçe doğruluğu `tiny`'den belirgin
+// şekilde daha iyidir. Daha hızlı istiyorsanız 'Xenova/whisper-tiny' (~40 MB),
+// daha doğru istiyorsanız 'Xenova/whisper-small' (~470 MB) kullanın.
+const DEFAULT_MODEL = 'Xenova/whisper-base';
 const TARGET_SAMPLE_RATE = 16000;
 
 // Whisper dil kodları BCP-47 değil, İngilizce dil isimleridir.
@@ -38,15 +40,18 @@ type TranscriberFn = (
   opts: Record<string, unknown>,
 ) => Promise<{ text: string }>;
 
-let transcriberPromise: Promise<TranscriberFn> | null = null;
+// Her model ayrı cache'lenir; kullanıcı kalite seviyesini değiştirirse
+// önceki model bellekte kalır ama yeni istek doğru pipeline'ı yükler.
+const transcriberCache = new Map<string, Promise<TranscriberFn>>();
 
 async function getTranscriber(
   model: string,
   onProgress?: (ratio: number) => void,
 ): Promise<TranscriberFn> {
-  if (transcriberPromise) return transcriberPromise;
+  const cached = transcriberCache.get(model);
+  if (cached) return cached;
 
-  transcriberPromise = (async () => {
+  const promise = (async () => {
     const mod = await import('@xenova/transformers');
     // Uzaktan (HF Hub) model yüklemeye izin ver, yerel aramaları kapat.
     mod.env.allowLocalModels = false;
@@ -64,7 +69,15 @@ async function getTranscriber(
     return pipe as unknown as TranscriberFn;
   })();
 
-  return transcriberPromise;
+  // Hata olursa bir sonraki denemede tekrar yüklensin diye cache'ten kaldır.
+  promise.catch(() => {
+    if (transcriberCache.get(model) === promise) {
+      transcriberCache.delete(model);
+    }
+  });
+
+  transcriberCache.set(model, promise);
+  return promise;
 }
 
 async function blobToFloat32Mono(
@@ -101,6 +114,38 @@ async function blobToFloat32Mono(
     // noop
   }
   return mono;
+}
+
+/**
+ * Whisper'ın sessiz/boş ses parçalarında ürettiği yaygın halüsinasyon
+ * cümlelerini temizler. Bunlar eğitim verisindeki YouTube altyazılarından
+ * gelen boilerplate metinlerdir ve gerçek konuşma değildir.
+ */
+const HALLUCINATION_PATTERNS: RegExp[] = [
+  /^alt\s*yaz[ıi]/i,
+  /^subtitles?\s+by/i,
+  /translated\s+by/i,
+  /transcript(ion)?\s+by/i,
+  /abone\s+ol/i,
+  /be[ğg]enmeyi\s+unutmay[ıi]n/i,
+  /thanks?\s+for\s+watching/i,
+  /^teşekkür(ler)?\s*$/i,
+  /^thank\s+you\.?$/i,
+  /\[music\]/i,
+  /\[müzik\]/i,
+  /m\.?k\.?\s+meet$/i,
+];
+
+function filterHallucinations(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return '';
+  // Çok kısa çıktılarda şüpheli kalıpları at.
+  if (trimmed.length < 80) {
+    for (const pattern of HALLUCINATION_PATTERNS) {
+      if (pattern.test(trimmed)) return '';
+    }
+  }
+  return trimmed;
 }
 
 function pickSupportedMimeType(): string {
@@ -199,7 +244,7 @@ export function useWhisperSTT(
       }
       setIsTranscribing(true);
       try {
-        if (transcriberPromise === null) setIsModelLoading(true);
+        if (!transcriberCache.has(model)) setIsModelLoading(true);
         const transcriber = await getTranscriber(model, (ratio) => {
           setModelProgress(ratio);
         });
@@ -214,9 +259,17 @@ export function useWhisperSTT(
           chunk_length_s: 30,
           stride_length_s: 5,
           return_timestamps: false,
+          // Halüsinasyonu azaltmak için deterministic decoding.
+          temperature: 0,
+          // Önceki segmentlere koşullandırmayı kapat — kısa dikte komutlarında
+          // yaygın bir halüsinasyon (tekrar eden cümleler) sorununu azaltır.
+          condition_on_previous_text: false,
+          no_repeat_ngram_size: 3,
         });
         const text = (result?.text || '').trim();
-        if (text) onFinalResultRef.current?.(text);
+        // Whisper bazı sessiz/çok kısa kayıtlarda boilerplate üretir; filtrele.
+        const cleaned = filterHallucinations(text);
+        if (cleaned) onFinalResultRef.current?.(cleaned);
       } catch (e: any) {
         const msg = e?.message || 'Transcription failed';
         setError(msg);
