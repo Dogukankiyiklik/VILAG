@@ -73,6 +73,8 @@ interface AppState {
     searchEngine: string;
     browserStartUrl?: string;
     operator: OperatorMode;
+    ragEnabled: boolean;
+    hitlEnabled: boolean;
     plannerEnabled: boolean;
     plannerBaseUrl: string;
     plannerApiKey: string;
@@ -247,6 +249,8 @@ let appState: AppState = {
     searchEngine: 'google',
     browserStartUrl: 'https://teams.microsoft.com',
     operator: 'browser',
+    ragEnabled: false,
+    hitlEnabled: false,
     plannerEnabled: false,
     plannerBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     plannerApiKey: '',
@@ -654,13 +658,18 @@ async function runDirect(
   mode: OperatorMode,
 ): Promise<void> {
   const basePrompt = buildSystemPrompt(settings.language, mode);
-  const scenario = retriever.retrieve(instructions);
-  if (scenario) {
-    logger.info('[RAG] Matched scenario:', scenario.id, scenario.title);
+  let systemPrompt = basePrompt;
+  if (settings.ragEnabled) {
+    const scenario = retriever.retrieve(instructions);
+    if (scenario) {
+      logger.info('[RAG] Matched scenario:', scenario.id, scenario.title);
+    } else {
+      logger.info('[RAG] No matching scenario found, using base prompt');
+    }
+    systemPrompt = injectScenario(basePrompt, scenario);
   } else {
-    logger.info('[RAG] No matching scenario found, using base prompt');
+    logger.info('[RAG] Disabled by settings, using base prompt');
   }
-  const systemPrompt = injectScenario(basePrompt, scenario);
 
   const agent = createAgent(settings, systemPrompt, operatorInstance, {
     skipRuntimeApproval: false,
@@ -691,10 +700,15 @@ async function runWithPlanner(
   });
 
   // Optionally give planner the RAG scenario for context
-  const overallScenario = retriever.retrieve(instructions);
-  const scenarioContext = overallScenario
-    ? overallScenario.steps.map((s) => `${s.order}. ${s.action}`).join('\n')
-    : undefined;
+  let scenarioContext: string | undefined;
+  if (settings.ragEnabled) {
+    const overallScenario = retriever.retrieve(instructions);
+    scenarioContext = overallScenario
+      ? overallScenario.steps.map((s) => `${s.order}. ${s.action}`).join('\n')
+      : undefined;
+  } else {
+    logger.info('[RAG] Disabled by settings, planner will run without scenario context');
+  }
 
   let plan;
   try {
@@ -717,6 +731,10 @@ async function runWithPlanner(
       broadcastState();
     },
     onApprovalNeeded: async (subtask: Subtask) => {
+      if (!settings.hitlEnabled) {
+        logger.info(`[HITL] Disabled by settings, auto-approving subtask ${subtask.id}`);
+        return true;
+      }
       logger.info(`[HITL] Subtask ${subtask.id} requires approval: ${subtask.instruction}`);
       const approved = await approvalManager.request(
         subtask.id,
@@ -732,11 +750,14 @@ async function runWithPlanner(
 
       // RAG for this subtask
       const basePrompt = buildSystemPrompt(settings.language, mode);
-      const scenario = retriever.retrieve(subtask.instruction);
-      if (scenario) {
-        logger.info(`[RAG] Subtask ${subtask.id} matched scenario: ${scenario.id}`);
+      let systemPrompt = basePrompt;
+      if (settings.ragEnabled) {
+        const scenario = retriever.retrieve(subtask.instruction);
+        if (scenario) {
+          logger.info(`[RAG] Subtask ${subtask.id} matched scenario: ${scenario.id}`);
+        }
+        systemPrompt = injectScenario(basePrompt, scenario);
       }
-      const systemPrompt = injectScenario(basePrompt, scenario);
 
       // Run agent for this subtask.
       // If planner already asked approval for this subtask, skip runtime re-approval.
@@ -844,6 +865,9 @@ function createAgent(
       broadcastState();
     },
     onBeforeExecuteAction: async ({ prediction, parsedPrediction, loopNumber, actionIndex }) => {
+      if (!settings.hitlEnabled) {
+        return true;
+      }
       if (options?.skipRuntimeApproval) {
         return true;
       }
