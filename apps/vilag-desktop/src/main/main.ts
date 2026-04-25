@@ -53,6 +53,17 @@ const approvalManager = new ApprovalManager((request) => {
   logger.info(`[HITL] Approval requested for subtask ${request.subtaskId}: ${request.description}`);
 });
 
+function sendRiskNotification(subtaskId: number, description: string, riskLevel: 'medium'): void {
+  const payload = { subtaskId, description, riskLevel };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('risk-notification', payload);
+  }
+  const widgetWindow = getWidgetWindow();
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    widgetWindow.webContents.send('risk-notification', payload);
+  }
+}
+
 // ===== Uygulama Durumu (App State) =====
 type OperatorMode = 'browser' | 'computer';
 
@@ -74,7 +85,6 @@ interface AppState {
     browserStartUrl?: string;
     operator: OperatorMode;
     ragEnabled: boolean;
-    hitlEnabled: boolean;
     plannerEnabled: boolean;
     plannerBaseUrl: string;
     plannerApiKey: string;
@@ -284,7 +294,6 @@ let appState: AppState = {
     browserStartUrl: 'https://teams.microsoft.com',
     operator: 'browser',
     ragEnabled: false,
-    hitlEnabled: false,
     plannerEnabled: false,
     plannerBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     plannerApiKey: '',
@@ -749,7 +758,7 @@ async function runWithPlanner(
     plan = await planner.createPlan(instructions, scenarioContext);
     logger.info('[Planner] Plan created with', plan.subtasks.length, 'subtasks');
     for (const st of plan.subtasks) {
-      logger.info(`  [${st.id}] ${st.instruction} (${st.riskLevel}, approval: ${st.requiresApproval})`);
+      logger.info(`  [${st.id}] ${st.instruction} (${st.riskLevel})`);
     }
   } catch (e) {
     logger.error('[Planner] Failed to create plan, falling back to direct:', e);
@@ -764,11 +773,11 @@ async function runWithPlanner(
       logger.info(`[PlanExecutor] Starting subtask ${subtask.id}: ${subtask.instruction}`);
       broadcastState();
     },
+    onRiskNotification: async (subtask: Subtask) => {
+      logger.info(`[HITL] Medium-risk notification for subtask ${subtask.id}: ${subtask.instruction}`);
+      sendRiskNotification(subtask.id, subtask.instruction, 'medium');
+    },
     onApprovalNeeded: async (subtask: Subtask) => {
-      if (!settings.hitlEnabled) {
-        logger.info(`[HITL] Disabled by settings, auto-approving subtask ${subtask.id}`);
-        return true;
-      }
       logger.info(`[HITL] Subtask ${subtask.id} requires approval: ${subtask.instruction}`);
       const approved = await approvalManager.request(
         subtask.id,
@@ -794,9 +803,9 @@ async function runWithPlanner(
       }
 
       // Run agent for this subtask.
-      // If planner already asked approval for this subtask, skip runtime re-approval.
+      // Planner is the single authority for risk-based HITL decisions.
       const agent = createAgent(settings, systemPrompt, operatorInstance, {
-        skipRuntimeApproval: !!subtask.requiresApproval,
+        skipRuntimeApproval: true,
       });
       currentAgent = agent;
       try {
@@ -899,7 +908,9 @@ function createAgent(
       broadcastState();
     },
     onBeforeExecuteAction: async ({ prediction, parsedPrediction, loopNumber, actionIndex }) => {
-      if (!settings.hitlEnabled) {
+      // HITL must be driven by planner risk classification.
+      // If planner is disabled, runtime action-level HITL must not trigger.
+      if (!settings.plannerEnabled) {
         return true;
       }
       if (options?.skipRuntimeApproval) {

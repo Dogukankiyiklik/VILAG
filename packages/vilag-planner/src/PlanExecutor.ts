@@ -7,6 +7,8 @@ import type { Plan, Subtask } from './types';
 export interface PlanExecutorCallbacks {
   /** Called before each subtask starts. Return false to skip. */
   onSubtaskStart?: (subtask: Subtask) => Promise<void>;
+  /** Called for medium-risk subtasks as non-blocking notification. */
+  onRiskNotification?: (subtask: Subtask) => Promise<void>;
   /** Called when a subtask needs approval. Return true to approve. */
   onApprovalNeeded?: (subtask: Subtask) => Promise<boolean>;
   /** Called to execute a subtask (typically guiAgent.run). */
@@ -29,8 +31,13 @@ export class PlanExecutor {
       // Notify subtask start
       await callbacks.onSubtaskStart?.(subtask);
 
-      // Check approval if needed
-      if (subtask.requiresApproval && callbacks.onApprovalNeeded) {
+      // Medium risk: notify the user, then continue.
+      if (subtask.riskLevel === 'medium' && callbacks.onRiskNotification) {
+        await callbacks.onRiskNotification(subtask);
+      }
+
+      // High risk: explicit approval gate.
+      if (subtask.riskLevel === 'high' && callbacks.onApprovalNeeded) {
         const approved = await callbacks.onApprovalNeeded(subtask);
         if (!approved) {
           continue; // Skip this subtask

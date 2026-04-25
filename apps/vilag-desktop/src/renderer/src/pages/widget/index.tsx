@@ -24,6 +24,12 @@ interface ApprovalRequest {
   riskLevel: string;
 }
 
+interface RiskNotification {
+  subtaskId: number;
+  description: string;
+  riskLevel: 'medium';
+}
+
 function getMessageText(msg: any): string {
   if (!msg) return '';
   if (typeof msg === 'string') return msg;
@@ -62,6 +68,7 @@ export default function WidgetPage() {
   const [thinking, setThinking] = useState(false);
   const [lastMessage, setLastMessage] = useState<any | null>(null);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
+  const [riskNotification, setRiskNotification] = useState<RiskNotification | null>(null);
 
   useEffect(() => {
     window.vilagAPI?.getState().then((state: any) => {
@@ -84,6 +91,10 @@ export default function WidgetPage() {
 
     window.vilagAPI?.onApprovalRequest((request: ApprovalRequest) => {
       setApproval(request);
+    });
+    window.vilagAPI?.onRiskNotification((request: RiskNotification) => {
+      setRiskNotification(request);
+      setTimeout(() => setRiskNotification(null), 4500);
     });
   }, []);
 
@@ -175,6 +186,14 @@ export default function WidgetPage() {
         </div>
       ) : (
         <div className="mb-2 flex min-h-0 flex-1 flex-col gap-2">
+          {riskNotification && (
+            <Alert className="border-chart-4/30 bg-chart-4/10 px-3 py-2.5">
+              <AlertTitle className="text-[11px]">Medium Risk Notice</AlertTitle>
+              <AlertDescription className="text-[11px] leading-relaxed">
+                {riskNotification.description}
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">Last Action</div>
             <div className="mt-0.5 text-[11px] font-semibold text-foreground">

@@ -8,7 +8,6 @@ export interface Subtask {
   id: number;
   instruction: string;
   riskLevel: RiskLevel;
-  requiresApproval: boolean;
 }
 
 export interface Plan {

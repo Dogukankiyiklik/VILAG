@@ -33,6 +33,9 @@ const api = {
   onApprovalRequest: (callback: (request: any) => void) => {
     ipcRenderer.on('approval-request', (_event, request) => callback(request));
   },
+  onRiskNotification: (callback: (request: any) => void) => {
+    ipcRenderer.on('risk-notification', (_event, request) => callback(request));
+  },
   respondApproval: (approved: boolean) => ipcRenderer.invoke('approvalResponse', approved),
 
   // Pencere Kontrolleri

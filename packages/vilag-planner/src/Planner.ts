@@ -14,7 +14,7 @@
  * traffic, which works for the native endpoint but is rejected by the
  * OpenAI-compatible endpoint with "Missing or invalid Authorization header".
  */
-import type { PlannerConfig, Plan, Subtask } from './types';
+import type { PlannerConfig, Plan, RiskLevel, Subtask } from './types';
 import { PLANNER_SYSTEM_PROMPT } from './prompts';
 import { GoogleGenAI } from '@google/genai';
 
@@ -64,6 +64,14 @@ function mentionsSubmitSearch(text: string): boolean {
   );
 }
 
+function normalizeRiskLevel(value: unknown): RiskLevel {
+  const risk = String(value || '').toLowerCase().trim();
+  if (risk === 'high' || risk === 'medium' || risk === 'low') {
+    return risk;
+  }
+  return 'low';
+}
+
 function postProcessSubtasks(subtasks: Subtask[]): Subtask[] {
   const cleaned: Subtask[] = [];
   let searchAlreadySubmitted = false;
@@ -88,10 +96,7 @@ function postProcessSubtasks(subtasks: Subtask[]): Subtask[] {
     const next: Subtask = {
       ...original,
       instruction,
-      riskLevel: original.riskLevel || 'low',
-      requiresApproval:
-        original.requiresApproval ??
-        (original.riskLevel === 'high' || isEnterSubmitStep),
+      riskLevel: isEnterSubmitStep ? 'high' : normalizeRiskLevel(original.riskLevel),
     };
 
     cleaned.push(next);
@@ -196,7 +201,10 @@ export class Planner {
         throw new Error(`Planner Gemini error: ${lastError?.message || 'Unknown error'}`);
       }
 
-      const subtasks = postProcessSubtasks(this.parseResponse(contentFromNative));
+      const subtasks = this.ensureNonEmptyPlan(
+        postProcessSubtasks(this.parseResponse(contentFromNative)),
+        contentFromNative,
+      );
       return {
         originalInstruction: instruction,
         subtasks,
@@ -252,7 +260,10 @@ export class Planner {
     }
 
     const content: string = parsed.choices?.[0]?.message?.content ?? '';
-    const subtasks = postProcessSubtasks(this.parseResponse(content));
+    const subtasks = this.ensureNonEmptyPlan(
+      postProcessSubtasks(this.parseResponse(content)),
+      content,
+    );
 
     return {
       originalInstruction: instruction,
@@ -276,9 +287,8 @@ export class Planner {
 
       return rawTasks.map((t: any, idx: number) => ({
         id: t.id ?? idx + 1,
-        instruction: t.instruction || t.task || '',
-        riskLevel: t.riskLevel || 'low',
-        requiresApproval: t.requiresApproval ?? t.riskLevel === 'high',
+        instruction: t.instruction || t.task || t.subtask || t.step || '',
+        riskLevel: normalizeRiskLevel(t.riskLevel),
       }));
     } catch {
       return this.fallbackPlan();
@@ -290,7 +300,18 @@ export class Planner {
       id: 1,
       instruction: 'Execute the task as given',
       riskLevel: 'medium',
-      requiresApproval: false,
     }];
+  }
+
+  private ensureNonEmptyPlan(subtasks: Subtask[], rawContent: string): Subtask[] {
+    if (subtasks.length > 0) {
+      return subtasks;
+    }
+    const preview = (rawContent || '').replace(/\s+/g, ' ').slice(0, 240);
+    console.warn('[Planner] Post-processed subtasks are empty. Falling back to safe single-step plan.');
+    if (preview) {
+      console.warn('[Planner] Raw planner content preview:', preview);
+    }
+    return this.fallbackPlan();
   }
 }

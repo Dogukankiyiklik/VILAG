@@ -1,4 +1,4 @@
-import { Cpu, Globe, BrainCircuit, Sparkles, ShieldCheck } from 'lucide-react';
+import { Cpu, Globe, BrainCircuit, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@renderer/components/ui/card';
@@ -20,7 +20,6 @@ interface SettingsState {
   searchEngine: string;
   browserStartUrl?: string;
   ragEnabled: boolean;
-  hitlEnabled: boolean;
   plannerEnabled: boolean;
   plannerBaseUrl: string;
   plannerApiKey: string;
@@ -192,39 +191,6 @@ export default function SettingsPage() {
                 {settings.ragEnabled
                   ? 'On — scenario hints injected into the prompt'
                   : 'Off — agent runs without scenario retrieval'}
-              </span>
-            </label>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              Human-in-the-Loop (HITL)
-            </CardTitle>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-4">
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <span
-                role="switch"
-                aria-checked={settings.hitlEnabled ?? false}
-                onClick={() => handleSettingsChange('hitlEnabled', !settings.hitlEnabled)}
-                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors ${settings.hitlEnabled
-                    ? 'bg-primary border-primary'
-                    : 'bg-input border-input'
-                  }`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 rounded-full bg-background shadow-sm transition-transform ${settings.hitlEnabled ? 'translate-x-4' : 'translate-x-0.5'
-                    }`}
-                />
-              </span>
-              <span className="text-xs font-medium text-muted-foreground select-none">
-                {settings.hitlEnabled
-                  ? 'On — high-risk actions will ask for your approval'
-                  : 'Off — agent runs without asking for approval'}
               </span>
             </label>
           </CardContent>
