@@ -1,3 +1,0 @@
-* Raporu oku ve eksik varsa tamamlamaları yap.
-* Testleri koda ekle ve her şeyin birim testini vb. yap.
-* TR/EN seçeneklerini düzenle. TR çalışmıyor.

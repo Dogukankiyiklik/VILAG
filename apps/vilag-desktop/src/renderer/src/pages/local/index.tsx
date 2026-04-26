@@ -15,6 +15,7 @@ import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useDictation } from '@renderer/hooks/useDictation';
+import { useI18n } from '@renderer/i18n';
 
 type DictationLang = 'tr-TR' | 'en-US';
 type DictationQuality = 'fast' | 'balanced' | 'accurate';
@@ -23,12 +24,6 @@ const WHISPER_MODEL_BY_QUALITY: Record<DictationQuality, string> = {
   fast: 'Xenova/whisper-tiny',
   balanced: 'Xenova/whisper-base',
   accurate: 'Xenova/whisper-small',
-};
-
-const QUALITY_LABELS: Record<DictationQuality, string> = {
-  fast: 'Hızlı',
-  balanced: 'Dengeli',
-  accurate: 'Doğru',
 };
 
 declare global {
@@ -146,6 +141,7 @@ function toPercent(
 }
 
 export default function LocalPage() {
+  const { language, t } = useI18n();
   const [status, setStatus] = useState<string>('end');
   const [thinking, setThinking] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
@@ -276,12 +272,12 @@ export default function LocalPage() {
 
   const getStatusLabel = () => {
     switch (status) {
-      case 'running': return 'Running';
-      case 'pause': return 'Paused';
-      case 'error': return 'Error';
-      case 'max_loop': return 'Max Loops';
-      case 'call_user': return 'Needs Intervention';
-      default: return 'Idle';
+      case 'running': return t('local.status.running');
+      case 'pause': return t('local.status.pause');
+      case 'error': return t('local.status.error');
+      case 'max_loop': return t('local.status.maxLoop');
+      case 'call_user': return t('local.status.callUser');
+      default: return t('local.status.idle');
     }
   };
 
@@ -315,7 +311,7 @@ export default function LocalPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b bg-card shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Local Operator</span>
+          <span className="text-sm font-medium">{t('local.headerTitle')}</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${getStatusColor()} ${isRunning ? 'animate-pulse' : ''}`} />
             {getStatusLabel()}
@@ -323,13 +319,13 @@ export default function LocalPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handlePauseResume} disabled={!isRunning && !isPaused}>
-            {isPaused ? <><Play className="h-4 w-4" />Resume</> : <><Pause className="h-4 w-4" />Pause</>}
+            {isPaused ? <><Play className="h-4 w-4" />{t('local.resume')}</> : <><Pause className="h-4 w-4" />{t('local.pause')}</>}
           </Button>
           <Button variant="outline" size="sm" onClick={handleStop} disabled={!isRunning && !isPaused && !thinking}>
-            <Square className="h-4 w-4" />Stop
+            <Square className="h-4 w-4" />{t('local.stop')}
           </Button>
           <Button size="sm" onClick={handleRun} disabled={!instruction.trim() || thinking}>
-            <Play className="h-4 w-4" />Run
+            <Play className="h-4 w-4" />{t('local.run')}
           </Button>
         </div>
       </div>
@@ -341,14 +337,14 @@ export default function LocalPage() {
           <div className="flex items-center justify-between w-full px-4 mb-2">
             <Button variant="outline" size="sm" onClick={handleNewChat}>
               <MessageCirclePlus className="h-4 w-4" />
-              New Chat
+              {t('layout.newChat')}
             </Button>
           </div>
           <ScrollArea className="flex-1 px-4">
             <div className="space-y-4" ref={messagesEndRef}>
               {messages.length === 0 && (
                 <div className="mt-10 text-sm text-muted-foreground text-center">
-                  No messages yet. Describe a task in the input below and press Run.
+                  {t('local.noMessages')}
                 </div>
               )}
               {messages.map((msg, idx) => {
@@ -357,7 +353,7 @@ export default function LocalPage() {
                 return (
                   <div key={idx} className="text-sm">
                     <div className={`font-medium mb-1.5 text-xs tracking-wide uppercase ${isHuman ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {isHuman ? 'User' : 'Agent'}
+                      {isHuman ? t('local.user') : t('local.agent')}
                     </div>
                     {text ? (
                       <div className={`rounded-lg px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-wrap ${isHuman ? 'bg-primary/10 text-foreground' : 'bg-muted text-foreground'}`}>
@@ -365,7 +361,7 @@ export default function LocalPage() {
                       </div>
                     ) : (
                       <div className="rounded-lg bg-muted/50 px-3.5 py-2.5 text-[11px] text-muted-foreground italic">
-                        [System action]
+                        {t('local.systemAction')}
                       </div>
                     )}
                   </div>
@@ -378,7 +374,7 @@ export default function LocalPage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse [animation-delay:0.15s]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse [animation-delay:0.3s]" />
                   </span>
-                  Thinking...
+                  {t('local.thinking')}
                 </div>
               )}
               {errorMsg && (
@@ -393,10 +389,8 @@ export default function LocalPage() {
               <Textarea
                 placeholder={
                   isListening
-                    ? dictationLang === 'tr-TR'
-                      ? 'Dinleniyor... konuşun'
-                      : 'Listening... speak now'
-                    : 'What can I do for you today?'
+                    ? t('local.placeholder.listening')
+                    : t('local.placeholder.default')
                 }
                 value={instruction}
                 onChange={(e) => setInstruction(e.target.value)}
@@ -417,14 +411,14 @@ export default function LocalPage() {
                 disabled={!isSTTSupported || thinking || isTranscribing || isModelLoading}
                 title={
                   !isSTTSupported
-                    ? 'Sesli dikte bu ortamda desteklenmiyor'
+                    ? t('local.dictationNotSupported')
                     : isListening
-                      ? 'Dinlemeyi durdur'
+                      ? t('local.stopListening')
                       : isModelLoading
-                        ? `Model yükleniyor (%${Math.round(modelProgress)})`
+                        ? `${t('local.modelLoading')} (%${Math.round(modelProgress)})`
                         : isTranscribing
-                          ? 'Transkribe ediliyor...'
-                          : `Sesli dikte başlat (${sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'})`
+                          ? t('local.transcribing')
+                          : `${t('local.startDictation')} (${sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'})`
                 }
                 className={`absolute right-2 bottom-2 h-8 w-8 ${isListening ? 'animate-pulse' : ''}`}
               >
@@ -470,10 +464,10 @@ export default function LocalPage() {
                       disabled={isListening || isTranscribing || isModelLoading}
                       title={
                         q === 'fast'
-                          ? 'Hızlı (tiny, ~40MB) — az doğru'
+                          ? t('local.quality.fastTooltip')
                           : q === 'balanced'
-                            ? 'Dengeli (base, ~140MB) — önerilen'
-                            : 'Doğru (small, ~470MB) — en iyi doğruluk'
+                            ? t('local.quality.balancedTooltip')
+                            : t('local.quality.accurateTooltip')
                       }
                       className={`px-2 py-0.5 rounded-sm transition-colors disabled:opacity-40 ${
                         dictationQuality === q
@@ -482,7 +476,11 @@ export default function LocalPage() {
                       }`}
                       aria-pressed={dictationQuality === q}
                     >
-                      {QUALITY_LABELS[q]}
+                      {q === 'fast'
+                        ? t('local.quality.fast')
+                        : q === 'balanced'
+                          ? t('local.quality.balanced')
+                          : t('local.quality.accurate')}
                     </button>
                   ))}
                 </div>
@@ -494,19 +492,19 @@ export default function LocalPage() {
                 ) : isModelLoading ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    Whisper modeli indiriliyor... %{Math.round(modelProgress)}
+                    {t('local.whisperDownloading')} %{Math.round(modelProgress)}
                   </span>
                 ) : isTranscribing ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    {dictationLang === 'tr-TR' ? 'Metne dönüştürülüyor...' : 'Transcribing...'}
+                    {t('local.transcribing')}
                   </span>
                 ) : isListening && interimTranscript ? (
                   <span className="italic">{interimTranscript}</span>
                 ) : isListening ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-                    {dictationLang === 'tr-TR' ? 'Dinleniyor' : 'Listening'}
+                    {t('local.listening')}
                     <span className="text-muted-foreground/60">
                       · {sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'}
                     </span>
@@ -514,10 +512,10 @@ export default function LocalPage() {
                 ) : engineNotice ? (
                   <span className="text-muted-foreground/80">{engineNotice}</span>
                 ) : !isSTTSupported ? (
-                  <span>Sesli dikte bu ortamda desteklenmiyor.</span>
+                  <span>{t('local.dictationNotSupported')}</span>
                 ) : (
                   <span className="text-muted-foreground/60">
-                    {sttEngine === 'whisper' ? 'Whisper (yerel)' : 'Web Speech'} · hazır
+                    {sttEngine === 'whisper' ? t('local.whisperLocal') : 'Web Speech'} · {t('local.ready')}
                   </span>
                 )}
               </div>
@@ -529,7 +527,7 @@ export default function LocalPage() {
         <Card className="flex-1 basis-3/5 p-3 shadow-none flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-2 px-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Screenshots</span>
+              <span className="text-sm font-medium">{t('local.screenshots')}</span>
               {currentShot?.actionInfo && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
                   <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
@@ -570,7 +568,7 @@ export default function LocalPage() {
                 <img
                   ref={imgRef}
                   src={currentShot.src}
-                  alt="Agent screenshot"
+                  alt={language === 'tr' ? 'Ajan ekran goruntusu' : 'Agent screenshot'}
                   className="block max-w-full max-h-[calc(100vh-220px)]"
                   onLoad={handleImgLoad}
                 />
@@ -609,8 +607,8 @@ export default function LocalPage() {
               </div>
             ) : (
               <div className="text-xs text-muted-foreground flex flex-col items-center gap-1.5">
-                <span>No screenshots available yet.</span>
-                <span className="text-muted-foreground/60">Run the agent to see progress.</span>
+                <span>{t('local.noScreenshots')}</span>
+                <span className="text-muted-foreground/60">{t('local.runToSeeProgress')}</span>
               </div>
             )}
           </div>

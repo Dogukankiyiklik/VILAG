@@ -16,6 +16,7 @@ import {
 } from '@renderer/components/ui/sidebar';
 import { Button } from '@renderer/components/ui/button';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
+import { useI18n } from '@renderer/i18n';
 
 import logo from '../../../../resources/logo/icon-128.png';
 
@@ -31,11 +32,11 @@ interface ChatSession {
   updatedAt: number;
 }
 
-function compactSessionTitle(title: string): string {
+function compactSessionTitle(title: string, fallback: string): string {
   const cleaned = (title || '')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!cleaned) return 'New Chat';
+  if (!cleaned) return fallback;
 
   const words = cleaned.split(' ').filter(Boolean);
   const short = words.slice(0, 4).join(' ');
@@ -47,6 +48,7 @@ function compactSessionTitle(title: string): string {
 function SidebarBrand() {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const { t } = useI18n();
 
   return (
     <div className={`flex items-center ${isCollapsed ? 'justify-center py-3' : 'gap-2 px-2 py-3'}`}>
@@ -56,7 +58,7 @@ function SidebarBrand() {
       {!isCollapsed && (
         <div className="flex flex-col overflow-hidden">
           <span className="text-sm font-semibold leading-tight truncate">VILAG</span>
-          <span className="text-xs text-muted-foreground truncate">Desktop & Browser Agent</span>
+          <span className="text-xs text-muted-foreground truncate">{t('layout.brandSubtitle')}</span>
         </div>
       )}
     </div>
@@ -65,6 +67,7 @@ function SidebarBrand() {
 
 function SidebarToggleBar() {
   const { state, toggleSidebar } = useSidebar();
+  const { t } = useI18n();
   return (
     <div className="flex items-center h-10 px-3 shrink-0">
       <Button
@@ -72,7 +75,7 @@ function SidebarToggleBar() {
         size="icon"
         className="h-7 w-7"
         onClick={toggleSidebar}
-        title={state === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
+        title={state === 'expanded' ? t('layout.collapseSidebar') : t('layout.expandSidebar')}
       >
         {state === 'expanded' ? (
           <PanelLeftClose className="h-4 w-4" />
@@ -103,16 +106,18 @@ function HistoryPanel({
   onDelete: (id: string) => void;
   onClearAll: () => void;
 }) {
+  const { t, language } = useI18n();
   const formatTime = (ts: number) => {
     try {
       const d = new Date(ts);
       if (Number.isNaN(d.getTime())) return '--:--';
       const now = new Date();
       const isToday = d.toDateString() === now.toDateString();
+      const locale = language === 'tr' ? 'tr-TR' : 'en-US';
       if (isToday) {
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
       }
-      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
     } catch {
       return '--:--';
     }
@@ -136,7 +141,7 @@ function HistoryPanel({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 shrink-0">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
             <History className="h-4 w-4 text-muted-foreground" />
-            Chat history
+            {t('layout.chatHistory')}
           </div>
           <div
             className="flex items-center gap-1 pointer-events-auto"
@@ -152,9 +157,9 @@ function HistoryPanel({
               }}
               className="h-7 rounded-md px-2.5 flex items-center justify-center text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              title="Clear all sessions"
+              title={t('layout.clearAllSessions')}
             >
-              Clear all
+              {t('layout.clearAll')}
             </button>
             <button
               type="button"
@@ -175,7 +180,7 @@ function HistoryPanel({
           <div className="p-2 space-y-0.5">
             {sessions.length === 0 && (
               <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-                No sessions yet.
+                {t('layout.noSessions')}
               </div>
             )}
             {sessions.map((session) => {
@@ -200,7 +205,7 @@ function HistoryPanel({
                     <MessageSquare className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-xs font-medium truncate">
-                        {compactSessionTitle(session.title)}
+                        {compactSessionTitle(session.title, t('layout.newChat'))}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {formatTime(session.updatedAt)}
@@ -210,7 +215,7 @@ function HistoryPanel({
                   <button
                     type="button"
                     className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    title="Delete session"
+                    title={t('layout.deleteSession')}
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(session.id);
@@ -231,6 +236,7 @@ function HistoryPanel({
 export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useI18n();
 
   const isHome = location.pathname === '/' || location.pathname === '';
   const isSettings = location.pathname === '/settings';
@@ -308,21 +314,21 @@ export function MainLayout() {
           <button
             onClick={() => window.vilagAPI?.minimize()}
             className="h-full w-11 flex items-center justify-center hover:bg-sidebar-accent transition-colors"
-            title="Minimize"
+            title={t('layout.minimize')}
           >
             <Minus className="h-4 w-4 text-sidebar-foreground/50" />
           </button>
           <button
             onClick={() => window.vilagAPI?.maximize()}
             className="h-full w-11 flex items-center justify-center hover:bg-sidebar-accent transition-colors"
-            title="Maximize"
+            title={t('layout.maximize')}
           >
             <Square className="h-3 w-3 text-sidebar-foreground/50" />
           </button>
           <button
             onClick={() => window.vilagAPI?.close()}
             className="h-full w-11 flex items-center justify-center hover:bg-destructive transition-colors group"
-            title="Close"
+            title={t('layout.close')}
           >
             <X className="h-4 w-4 text-sidebar-foreground/50 group-hover:text-primary-foreground" />
           </button>
@@ -340,13 +346,13 @@ export function MainLayout() {
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isHome} onClick={() => navigate('/')}>
                   <MessageSquare className="h-4 w-4" />
-                  <span>Home</span>
+                  <span>{t('layout.home')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setHistoryOpen(true)} title="Chat history">
+                <SidebarMenuButton onClick={() => setHistoryOpen(true)} title={t('layout.chatHistory')}>
                   <History className="h-4 w-4" />
-                  <span>History</span>
+                  <span>{t('layout.history')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -356,13 +362,13 @@ export function MainLayout() {
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isSettings} onClick={() => navigate('/settings')}>
                   <Settings className="h-4 w-4" />
-                  <span>Settings</span>
+                  <span>{t('layout.settings')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton size="sm" onClick={toggleTheme}>
                   {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                  <span>Theme</span>
+                  <span>{t('layout.theme')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

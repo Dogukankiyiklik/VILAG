@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pause, Play, Square, Check, X } from 'lucide-react';
 import { Button } from '@renderer/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
+import { useI18n } from '@renderer/i18n';
 
 declare global {
   interface Window {
@@ -50,20 +51,21 @@ function getActionLabel(msg: any): string {
   return actionFromText || '-';
 }
 
-function compactThought(msg: any): string {
+function compactThought(msg: any, emptyLabel: string): string {
   const thoughtFromParsed = msg?.predictionParsed?.thought;
   const raw = typeof thoughtFromParsed === 'string' ? thoughtFromParsed : getMessageText(msg);
-  if (!raw) return 'No update yet.';
+  if (!raw) return emptyLabel;
 
   const cleaned = raw
     .replace(/Action:\s*[\s\S]*/i, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-  return cleaned || 'No update yet.';
+  return cleaned || emptyLabel;
 }
 
 export default function WidgetPage() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<Status>('end');
   const [thinking, setThinking] = useState(false);
   const [lastMessage, setLastMessage] = useState<any | null>(null);
@@ -126,11 +128,11 @@ export default function WidgetPage() {
   };
 
   const getStatusLabel = () => {
-    if (approval) return 'Awaiting Approval';
-    if (isRunning) return 'Running';
-    if (isPaused) return 'Paused';
-    if (thinking) return 'Thinking';
-    return 'Idle';
+    if (approval) return t('widget.awaitingApproval');
+    if (isRunning) return t('widget.running');
+    if (isPaused) return t('widget.paused');
+    if (thinking) return t('widget.thinking');
+    return t('widget.idle');
   };
 
   const getStatusDot = () => {
@@ -156,13 +158,13 @@ export default function WidgetPage() {
       {approval ? (
         <div className="mb-2 flex flex-col gap-2">
           <Alert className="border-primary/20 bg-primary/5 px-3 py-2.5">
-            <AlertTitle className="text-[11px]">Approval Required</AlertTitle>
+            <AlertTitle className="text-[11px]">{t('widget.approvalRequired')}</AlertTitle>
             <AlertDescription className="text-[11px] leading-relaxed">
               {approval.description}
             </AlertDescription>
           </Alert>
           <div className="inline-flex w-fit items-center rounded-full border border-border/70 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-            Risk: <span className="ml-1 font-medium text-foreground">{approval.riskLevel}</span>
+            {t('widget.risk')}: <span className="ml-1 font-medium text-foreground">{approval.riskLevel}</span>
           </div>
           <div className="flex gap-2 pt-1">
             <Button
@@ -171,7 +173,7 @@ export default function WidgetPage() {
               onClick={handleApprove}
             >
               <Check className="h-3 w-3" />
-              Approve
+              {t('widget.approve')}
             </Button>
             <Button
               size="sm"
@@ -180,7 +182,7 @@ export default function WidgetPage() {
               onClick={handleReject}
             >
               <X className="h-3 w-3" />
-              Reject
+              {t('widget.reject')}
             </Button>
           </div>
         </div>
@@ -188,36 +190,36 @@ export default function WidgetPage() {
         <div className="mb-2 flex min-h-0 flex-1 flex-col gap-2">
           {riskNotification && (
             <Alert className="border-chart-4/30 bg-chart-4/10 px-3 py-2.5">
-              <AlertTitle className="text-[11px]">Medium Risk Notice</AlertTitle>
+              <AlertTitle className="text-[11px]">{t('widget.mediumRiskNotice')}</AlertTitle>
               <AlertDescription className="text-[11px] leading-relaxed">
                 {riskNotification.description}
               </AlertDescription>
             </Alert>
           )}
           <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">Last Action</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">{t('widget.lastAction')}</div>
             <div className="mt-0.5 text-[11px] font-semibold text-foreground">
               {getActionLabel(lastMessage)}
             </div>
           </div>
 
           <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2 min-h-0 flex-1">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">Latest Update</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">{t('widget.latestUpdate')}</div>
             <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-5">
-              {compactThought(lastMessage)}
+              {compactThought(lastMessage, t('widget.noUpdateYet'))}
             </div>
           </div>
 
           <div className="rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">State</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80">{t('widget.state')}</div>
             <div className="mt-0.5 text-[11px] text-foreground">
               {isRunning
-                ? 'Agent is executing actions.'
+                ? t('widget.state.running')
                 : isPaused
-                  ? 'Agent is paused.'
+                  ? t('widget.state.paused')
                   : thinking
-                    ? 'Agent is thinking.'
-                    : 'Waiting for the next command.'}
+                    ? t('widget.state.thinking')
+                    : t('widget.state.idle')}
             </div>
           </div>
         </div>
@@ -225,7 +227,7 @@ export default function WidgetPage() {
 
       {!approval && !lastMessage && (
         <div className="mb-2 rounded-md border border-dashed border-border/80 bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground/70">
-          The agent&apos;s latest action and summary will appear here.
+          {t('widget.latestHint')}
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@renderer/components/ui/card';
 import { Input } from '@renderer/components/ui/input';
 import { Separator } from '@renderer/components/ui/separator';
+import { useI18n, type UILanguage } from '@renderer/i18n';
 
 declare global {
   interface Window {
@@ -28,6 +29,7 @@ interface SettingsState {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsState | null>(null);
+  const { t, setLanguage } = useI18n();
 
   useEffect(() => {
     window.vilagAPI?.getSettings().then((s: SettingsState) => {
@@ -40,12 +42,17 @@ export default function SettingsPage() {
     const updated = { ...settings, [key]: value };
     setSettings(updated);
     await window.vilagAPI?.updateSettings(updated);
+    if (key === 'language' && (value === 'en' || value === 'tr')) {
+      const lang = value as UILanguage;
+      setLanguage(lang);
+      window.dispatchEvent(new CustomEvent<UILanguage>('vilag-language-changed', { detail: lang }));
+    }
   };
 
   if (!settings) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading settings...
+        {t('common.loadingSettings')}
       </div>
     );
   }
@@ -53,9 +60,9 @@ export default function SettingsPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6 overflow-y-auto">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Agent Preferences</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{t('settings.title')}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure your model endpoints, API keys, and behavioral parameters.
+          {t('settings.subtitle')}
         </p>
       </div>
 
@@ -64,14 +71,14 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Cpu className="h-4 w-4 text-muted-foreground" />
-              Model Configuration (LM Studio)
+              {t('settings.modelConfig')}
             </CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4 space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                API Base URL
+                {t('settings.apiBaseUrl')}
               </label>
               <Input
                 value={settings.vlmBaseUrl}
@@ -81,7 +88,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                API Key
+                {t('settings.apiKey')}
               </label>
               <Input
                 value={settings.vlmApiKey}
@@ -91,12 +98,12 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Model Name
+                {t('settings.modelName')}
               </label>
               <Input
                 value={settings.vlmModelName}
                 onChange={(e) => handleSettingsChange('vlmModelName', e.target.value)}
-                placeholder="Enter model name (e.g., ui-tars-2b-q4)"
+                placeholder={t('settings.modelNamePlaceholder')}
               />
             </div>
           </CardContent>
@@ -106,14 +113,14 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Globe className="h-4 w-4 text-muted-foreground" />
-              Browser Controls
+              {t('settings.browserControls')}
             </CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-4 grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Max Execution Steps
+                {t('settings.maxExecutionSteps')}
               </label>
               <Input
                 type="number"
@@ -127,7 +134,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Default Search Engine
+                {t('settings.defaultSearchEngine')}
               </label>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -139,20 +146,20 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Agent Instruction Language
+                {t('settings.instructionLanguage')}
               </label>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={settings.language}
                 onChange={(e) => handleSettingsChange('language', e.target.value as 'en' | 'tr')}
               >
-                <option value="en">English (Default)</option>
-                <option value="tr">Türkçe</option>
+                <option value="en">{t('settings.englishDefault')}</option>
+                <option value="tr">{t('settings.turkish')}</option>
               </select>
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-medium text-muted-foreground">
-                Browser Start URL
+                {t('settings.browserStartUrl')}
               </label>
               <Input
                 value={settings.browserStartUrl ?? ''}
@@ -167,7 +174,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-muted-foreground" />
-              Retrieval (RAG)
+              {t('settings.ragTitle')}
             </CardTitle>
           </CardHeader>
           <Separator />
@@ -189,8 +196,8 @@ export default function SettingsPage() {
               </span>
               <span className="text-xs font-medium text-muted-foreground select-none">
                 {settings.ragEnabled
-                  ? 'On — scenario hints injected into the prompt'
-                  : 'Off — agent runs without scenario retrieval'}
+                  ? t('settings.ragOn')
+                  : t('settings.ragOff')}
               </span>
             </label>
           </CardContent>
@@ -200,7 +207,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-              Planner Configuration
+              {t('settings.plannerTitle')}
             </CardTitle>
           </CardHeader>
           <Separator />
@@ -221,14 +228,14 @@ export default function SettingsPage() {
                 />
               </span>
               <span className="text-xs font-medium text-muted-foreground select-none">
-                {settings.plannerEnabled ? 'On — commands will be broken into subtasks' : 'Off — commands run directly'}
+                {settings.plannerEnabled ? t('settings.plannerOn') : t('settings.plannerOff')}
               </span>
             </label>
             {settings.plannerEnabled && (
               <div className="space-y-4 pt-2 border-t border-border/60">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Planner API Base URL
+                    {t('settings.plannerApiBaseUrl')}
                   </label>
                   <Input
                     value={settings.plannerBaseUrl ?? ''}
@@ -238,7 +245,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Planner API Key
+                    {t('settings.plannerApiKey')}
                   </label>
                   <Input
                     value={settings.plannerApiKey ?? ''}
@@ -248,12 +255,12 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Planner Model Name
+                    {t('settings.plannerModelName')}
                   </label>
                   <Input
                     value={settings.plannerModelName ?? ''}
                     onChange={(e) => handleSettingsChange('plannerModelName', e.target.value)}
-                    placeholder="e.g., gemini-2.5-flash"
+                    placeholder={t('settings.plannerModelPlaceholder')}
                   />
                 </div>
               </div>
