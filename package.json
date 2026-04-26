@@ -10,6 +10,7 @@
         "postinstall": "playwright install",
         "dev": "pnpm --filter vilag-desktop dev",
         "build": "turbo run build",
+        "test": "vitest run",
         "typecheck": "turbo run typecheck",
         "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
         "format": "prettier --write .",
@@ -22,7 +23,8 @@
         "prettier": "^3.3.2",
         "rimraf": "^6.0.1",
         "turbo": "^2.4.4",
-        "typescript": "^5.7.2"
+        "typescript": "^5.7.2",
+        "vitest": "^4.1.5"
     },
     "engines": {
         "node": ">=20.x"
