@@ -183,12 +183,23 @@ export class Planner {
           lastError = err;
           const status = err?.status ?? err?.code;
           const message = String(err?.message || '');
-          const retryable = status === 503 || /UNAVAILABLE|high demand/i.test(message);
+          // undici "fetch failed" gerçek nedeni err.cause içinde saklar.
+          const causeCode = String(err?.cause?.code || err?.cause?.message || '');
+          // 503/aşırı yük VEYA ağ seviyesi geçici hatalar (fetch failed, bağlantı
+          // sıfırlama/zaman aşımı, IPv6 erişilemez, DNS) yeniden denenmeli.
+          const networkError = /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|EAI_AGAIN|UND_ERR/i.test(
+            `${message} ${causeCode}`,
+          );
+          const retryable =
+            status === 503 || /UNAVAILABLE|high demand/i.test(message) || networkError;
           if (!retryable || attempt === maxAttempts) {
             break;
           }
           const waitMs = 1200 * attempt;
-          console.warn(`[Planner] Gemini busy (attempt ${attempt}/${maxAttempts}). Retrying in ${waitMs}ms...`);
+          console.warn(
+            `[Planner] Gemini request failed (attempt ${attempt}/${maxAttempts}): ${message}` +
+              `${causeCode ? ` [cause: ${causeCode}]` : ''}. Retrying in ${waitMs}ms...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, waitMs));
         }
       }
@@ -198,6 +209,10 @@ export class Planner {
         console.error('[Planner] model:', this.model);
         console.error('[Planner] apiKey:', maskKey(this.apiKey));
         console.error('[Planner] last error:', lastError?.message || lastError);
+        console.error(
+          '[Planner] cause:',
+          lastError?.cause?.code || lastError?.cause?.message || lastError?.cause || '(none)',
+        );
         throw new Error(`Planner Gemini error: ${lastError?.message || 'Unknown error'}`);
       }
 

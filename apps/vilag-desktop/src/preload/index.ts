@@ -38,6 +38,14 @@ const api = {
   },
   respondApproval: (approved: boolean) => ipcRenderer.invoke('approvalResponse', approved),
 
+  // Demo görünürlüğü: Planner planı ve RAG eşleşmesi
+  onPlanUpdate: (callback: (plan: any) => void) => {
+    ipcRenderer.on('plan-update', (_event, plan) => callback(plan));
+  },
+  onRagMatch: (callback: (match: any) => void) => {
+    ipcRenderer.on('rag-match', (_event, match) => callback(match));
+  },
+
   // Pencere Kontrolleri
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),

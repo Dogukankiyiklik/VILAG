@@ -374,7 +374,7 @@ export function MainLayout() {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-1 flex flex-col min-h-0">
+        <SidebarInset className="flex-1 flex flex-col min-h-0 min-w-0">
           {/* Global sidebar toggle — her sayfada görünür */}
           <SidebarToggleBar />
           <main className="flex-1 overflow-auto">

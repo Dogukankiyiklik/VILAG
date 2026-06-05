@@ -64,6 +64,66 @@ function sendRiskNotification(subtaskId: number, description: string, riskLevel:
   }
 }
 
+// ===== Demo görünürlüğü: Plan + RAG yayını =====
+// Planner'ın ürettiği planı ve RAG eşleşmesini widget'a (ve ana pencereye)
+// göndererek demoda ne olduğunu görünür kılar.
+type SubtaskStatus = 'pending' | 'active' | 'done' | 'skipped' | 'error';
+interface PlanItemView {
+  id: number;
+  instruction: string;
+  riskLevel: string;
+  status: SubtaskStatus;
+}
+
+let currentPlanView: PlanItemView[] | null = null;
+
+function sendToWindows(channel: string, payload: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+  const widgetWindow = getWidgetWindow();
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    widgetWindow.webContents.send(channel, payload);
+  }
+}
+
+function broadcastPlan(): void {
+  sendToWindows('plan-update', currentPlanView ? { subtasks: currentPlanView } : null);
+}
+
+function setPlanView(subtasks: Subtask[]): void {
+  currentPlanView = subtasks.map((s) => ({
+    id: s.id,
+    instruction: s.instruction,
+    riskLevel: s.riskLevel,
+    status: 'pending' as SubtaskStatus,
+  }));
+  broadcastPlan();
+}
+
+function setSubtaskStatus(id: number, status: SubtaskStatus): void {
+  if (!currentPlanView) return;
+  const item = currentPlanView.find((s) => s.id === id);
+  if (!item) return;
+  item.status = status;
+  broadcastPlan();
+}
+
+function clearPlanView(): void {
+  currentPlanView = null;
+  broadcastPlan();
+}
+
+function sendRagMatch(scenario: { title: string; steps: { order: number; action: string }[] } | null): void {
+  const payload = scenario
+    ? {
+        title: scenario.title,
+        steps: scenario.steps.map((s) => `${s.order}. ${s.action}`),
+      }
+    : null;
+  sendToWindows('rag-match', payload);
+}
+
 // ===== Uygulama Durumu (App State) =====
 type OperatorMode = 'browser' | 'computer';
 
@@ -309,22 +369,19 @@ let currentAgent: GUIAgent<any> | null = null;
 const RUNTIME_HITL_REJECTED_ERROR = 'User rejected high-risk action';
 const RUNTIME_HITL_SKIP_SUBTASK_ERROR = 'Runtime HITL rejected - skip subtask';
 
-function shouldRequireRuntimeApproval(prediction: string, parsed: any): boolean {
+function shouldRequireRuntimeApproval(_prediction: string, parsed: any): boolean {
   const actionType = String(parsed?.action_type || '').toLowerCase();
   const actionInputs = parsed?.action_inputs || {};
   const key = String(actionInputs?.key || '').toLowerCase();
-  const context = `${prediction || ''} ${parsed?.thought || ''}`.toLowerCase();
 
-  // Enter/Return (submit) is always high-risk.
+  // Sadece gerçek "gönder/onayla" tuş basışını yakala: Enter/Return.
+  // NOT: Tıklamaları, modelin düşünce metnindeki "send/submit/confirm" gibi
+  // kelimelere göre YAKALAMIYORUZ. O yaklaşım kırılgandı: prompt'lar bu
+  // kelimeleri içerince (ör. planner direktifi, "send it to X" hedefi) model
+  // bunları düşüncesinde tekrar ediyor ve Copy gibi zararsız tıklamalar bile
+  // yanlışlıkla "riskli" sayılıp her tıklamada onay isteniyordu. Teams'te
+  // gönderim ağırlıkla Enter olduğu için bu kapsam yeterli ve gürültüsüz.
   if (actionType === 'hotkey' && (key.includes('enter') || key.includes('return'))) {
-    return true;
-  }
-
-  // Runtime confirmation keywords for destructive/submit-like click actions.
-  const riskyIntent =
-    /submit|send|confirm|approve|delete|remove|purchase|buy|pay|checkout|place order|transfer|sign in|login/.test(context);
-
-  if ((actionType === 'click' || actionType === 'left_double' || actionType === 'right_single') && riskyIntent) {
     return true;
   }
 
@@ -512,6 +569,9 @@ function registerIpcHandlers(): void {
     appState.errorMsg = null;
     appState.status = StatusEnum.RUNNING;
     appState.screenshots = [];
+    // Önceki çalışmadan kalan plan/RAG görünümünü temizle.
+    clearPlanView();
+    sendRagMatch(null);
     broadcastState();
 
     try {
@@ -544,6 +604,8 @@ function registerIpcHandlers(): void {
       logger.error('[stopAgent] Failed to stop current agent cleanly:', error);
     } finally {
       currentAgent = null;
+      clearPlanView();
+      sendRagMatch(null);
       // Ensure UI is restored immediately even if agent loop exits late.
       afterAgentRun(appState.operator);
       // Extra recovery pass for rare race conditions after cancellation.
@@ -591,6 +653,8 @@ function registerIpcHandlers(): void {
       messages: [],
       screenshots: [],
     });
+    clearPlanView();
+    sendRagMatch(null);
     broadcastState();
     scheduleSaveSessions();
   });
@@ -706,8 +770,10 @@ async function runDirect(
     const scenario = retriever.retrieve(instructions);
     if (scenario) {
       logger.info('[RAG] Matched scenario:', scenario.id, scenario.title);
+      sendRagMatch(scenario);
     } else {
       logger.info('[RAG] No matching scenario found, using base prompt');
+      sendRagMatch(null);
     }
     systemPrompt = injectScenario(basePrompt, scenario);
   } else {
@@ -726,7 +792,9 @@ async function runDirect(
 }
 
 /**
- * Planlayıcı ile çalıştırır: plan oluştur → her alt görevi RAG ile çalıştır.
+ * Planlayıcı ile çalıştırır (per-subtask): plan oluştur → her alt görevi AYRI
+ * çalıştır, widget'ta tik-tik ilerlet. İpuçları azaltılmış (paste notu yok,
+ * completed-steps yok) + "sadece bu adımı yap" kısıtı talimatın İÇİNDE. Loop sınırı yok.
  */
 async function runWithPlanner(
   instructions: string,
@@ -746,6 +814,7 @@ async function runWithPlanner(
   let scenarioContext: string | undefined;
   if (settings.ragEnabled) {
     const overallScenario = retriever.retrieve(instructions);
+    sendRagMatch(overallScenario);
     scenarioContext = overallScenario
       ? overallScenario.steps.map((s) => `${s.order}. ${s.action}`).join('\n')
       : undefined;
@@ -760,17 +829,22 @@ async function runWithPlanner(
     for (const st of plan.subtasks) {
       logger.info(`  [${st.id}] ${st.instruction} (${st.riskLevel})`);
     }
+    // Planı widget'a gönder (demo görünürlüğü).
+    setPlanView(plan.subtasks);
   } catch (e) {
     logger.error('[Planner] Failed to create plan, falling back to direct:', e);
     await runDirect(instructions, settings, operatorInstance, mode);
     return;
   }
 
-  // 2. Her alt görevi yürüt
+  // 2. Her alt görevi AYRI çalıştır (per-subtask) — widget tik-tik ilerlesin.
+  // Bu deneme: ipuçlarını azaltıyoruz (paste notu yok, completed-steps yok) ve
+  // "sadece bu adımı yap" kısıtını talimatın İÇİNE gömüyoruz. Loop sınırı YOK.
   const executor = new PlanExecutor();
   await executor.executePlan(plan, {
     onSubtaskStart: async (subtask: Subtask) => {
       logger.info(`[PlanExecutor] Starting subtask ${subtask.id}: ${subtask.instruction}`);
+      setSubtaskStatus(subtask.id, 'active');
       broadcastState();
     },
     onRiskNotification: async (subtask: Subtask) => {
@@ -785,31 +859,32 @@ async function runWithPlanner(
         subtask.riskLevel,
       );
       logger.info(`[HITL] Subtask ${subtask.id} ${approved ? 'approved' : 'rejected'} by user`);
+      if (!approved) {
+        setSubtaskStatus(subtask.id, 'skipped');
+      }
       return approved;
     },
     onExecute: async (subtask: Subtask) => {
-      // Durdurulup durdurulmadığını kontrol et
       if (appState.abortController?.signal.aborted) return;
 
-      // RAG for this subtask
-      const basePrompt = buildSystemPrompt(settings.language, mode);
-      let systemPrompt = basePrompt;
-      if (settings.ragEnabled) {
-        const scenario = retriever.retrieve(subtask.instruction);
-        if (scenario) {
-          logger.info(`[RAG] Subtask ${subtask.id} matched scenario: ${scenario.id}`);
-        }
-        systemPrompt = injectScenario(basePrompt, scenario);
-      }
+      // Sistem prompt'u: base ama "paste a meeting link" notu KALDIRILMIŞ
+      // (omitPasteHint=true). RAG enjeksiyonu ve "completed steps" ipucu YOK.
+      const systemPrompt = buildSystemPrompt(settings.language, mode, true);
 
-      // Run agent for this subtask.
-      // Planner is the single authority for risk-based HITL decisions.
+      // "Sadece bu adımı yap" kısıtını talimatın İÇİNE gömüyoruz; UI-TARS
+      // user instruction'ı hedef sayıyor, sistem meta-kuralından çok dinliyor.
+      const focusedInstruction =
+        subtask.instruction +
+        '\n\nSTRICT: Perform ONLY the action described above. ' +
+        'Do NOT type, paste, send, submit, or press Enter unless the line above explicitly says so. ' +
+        'As soon as that action is visibly done on screen, call finished(). Do nothing else.';
+
       const agent = createAgent(settings, systemPrompt, operatorInstance, {
-        skipRuntimeApproval: true,
+        skipRuntimeApproval: subtask.riskLevel === 'high',
       });
       currentAgent = agent;
       try {
-        await agent.run(subtask.instruction);
+        await agent.run(focusedInstruction);
       } finally {
         currentAgent = null;
       }
@@ -819,12 +894,13 @@ async function runWithPlanner(
     },
     onSubtaskComplete: async (subtask: Subtask) => {
       logger.info(`[PlanExecutor] Subtask ${subtask.id} completed`);
+      setSubtaskStatus(subtask.id, 'done');
     },
     onSubtaskError: async (subtask: Subtask, error: Error) => {
       logger.error(`[PlanExecutor] Subtask ${subtask.id} failed:`, error.message);
       if (error.message === RUNTIME_HITL_SKIP_SUBTASK_ERROR) {
         logger.warn(`[PlanExecutor] Subtask ${subtask.id} skipped by runtime HITL rejection`);
-        // Continue with next subtask instead of cancelling the entire plan.
+        setSubtaskStatus(subtask.id, 'skipped');
         appState.status = StatusEnum.RUNNING;
         appState.errorMsg = null;
         broadcastState();
@@ -832,9 +908,11 @@ async function runWithPlanner(
       }
       if (error.message === RUNTIME_HITL_REJECTED_ERROR) {
         logger.warn('[PlanExecutor] Stopping plan due to runtime HITL rejection');
+        setSubtaskStatus(subtask.id, 'error');
         return false;
       }
-      return true; // Continue to next subtask
+      setSubtaskStatus(subtask.id, 'error');
+      return true;
     },
   });
 
@@ -908,8 +986,13 @@ function createAgent(
       broadcastState();
     },
     onBeforeExecuteAction: async ({ prediction, parsedPrediction, loopNumber, actionIndex }) => {
-      // HITL must be driven by planner risk classification.
-      // If planner is disabled, runtime action-level HITL must not trigger.
+      // Runtime aksiyon-seviyesi HITL — yalnızca planner açıkken çalışır:
+      // - Direct mod (planner kapalı): tetiklenmez (tasarım gereği).
+      // - Planner açık + high alt görev: zaten alt görev başında onaylandı,
+      //   skipRuntimeApproval=true ile burada TEKRAR sorulmaz (çift onay yok).
+      // - Planner açık + low/medium alt görev: skipRuntimeApproval=false; planner
+      //   riski yetersiz/yanlış olsa bile gerçek dış etki (Enter/Send/Delete...)
+      //   bu dedektörle GERÇEKLEŞMEDEN yakalanıp onaya sunulur.
       if (!settings.plannerEnabled) {
         return true;
       }
@@ -923,12 +1006,17 @@ function createAgent(
       const actionType = parsedPrediction.action_type;
       const actionInputs = parsedPrediction.action_inputs || {};
       const actionLabel = `${actionType}(${JSON.stringify(actionInputs)})`;
+      // Kullanıcıya okunabilir mesaj.
+      const humanLabel =
+        actionType === 'hotkey'
+          ? `Press ${String(actionInputs.key || 'Enter')} (submit/send)`
+          : `${actionType} — possible send/submit/confirm`;
       const approvalId = Number(`${Date.now()}`.slice(-6)) + loopNumber + actionIndex;
 
       logger.info(`[HITL][Runtime] Approval required for action: ${actionLabel}`);
       const approved = await approvalManager.request(
         approvalId,
-        `Approve high-risk action: ${actionLabel}`,
+        `Approve before it runs: ${humanLabel}`,
         'high',
       );
 
@@ -975,7 +1063,7 @@ function afterAgentRun(operator: OperatorMode): void {
   showMainWindow();
 }
 
-function buildSystemPrompt(language: 'en' | 'tr', mode: OperatorMode = 'browser'): string {
+function buildSystemPrompt(language: 'en' | 'tr', mode: OperatorMode = 'browser', omitPasteHint = false): string {
   const lang = language === 'tr' ? 'Turkish' : 'English';
 
   // Moda göre aksiyonları ve bağlamı ayarla
@@ -1011,6 +1099,11 @@ call_user()
   }
 
   // Browser mode prompt (short v2)
+  // Planner alt görevlerinde "paste a meeting link" notunu modele VERMİYORUZ;
+  // bu not, modeli adım dışı yapıştırma/gönderime iten ipuçlarından biri.
+  const pasteNote = omitPasteHint
+    ? ''
+    : "\n- When you need to paste copied content (e.g., a meeting link), use `hotkey(key='ctrl v')`.";
   return `You are a browser GUI agent. You control a web browser to complete tasks from screenshots.
 
 ## Context
@@ -1046,8 +1139,7 @@ call_user()
 - If Teams is already open and signed in, do NOT re-open Teams or start login.
 - For Teams tasks, operate from the current Teams UI first.
 - Use \`navigate(content='...')\` only if the task explicitly requires another site.
-- If you repeat a similar action twice without visible progress, change strategy.
-- When you need to paste copied content (e.g., a meeting link), use \`hotkey(key='ctrl v')\`.
+- If you repeat a similar action twice without visible progress, change strategy.${pasteNote}
 
 ## User Instruction
 `;

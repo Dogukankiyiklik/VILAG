@@ -18,13 +18,10 @@ import { useDictation } from '@renderer/hooks/useDictation';
 import { useI18n } from '@renderer/i18n';
 
 type DictationLang = 'tr-TR' | 'en-US';
-type DictationQuality = 'fast' | 'balanced' | 'accurate';
 
-const WHISPER_MODEL_BY_QUALITY: Record<DictationQuality, string> = {
-  fast: 'Xenova/whisper-tiny',
-  balanced: 'Xenova/whisper-base',
-  accurate: 'Xenova/whisper-small',
-};
+// Dikte her zaman en doğru ("accurate") Whisper modeliyle çalışır.
+// fast/balanced seçenekleri kaldırıldı; sadece bu model kullanılır.
+const WHISPER_MODEL = 'Xenova/whisper-small';
 
 declare global {
   interface Window {
@@ -150,7 +147,6 @@ export default function LocalPage() {
   const [instruction, setInstruction] = useState('');
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [dictationLang, setDictationLang] = useState<DictationLang>('tr-TR');
-  const [dictationQuality, setDictationQuality] = useState<DictationQuality>('balanced');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -165,22 +161,18 @@ export default function LocalPage() {
   }, []);
 
   const {
-    engine: sttEngine,
     isSupported: isSTTSupported,
     isListening,
     isTranscribing,
     isModelLoading,
     modelProgress,
-    interimTranscript,
     error: sttError,
-    engineNotice,
     toggle: toggleDictation,
     stop: stopDictation,
     reset: resetDictation,
   } = useDictation({
     lang: dictationLang,
-    preferredEngine: 'auto',
-    whisperModel: WHISPER_MODEL_BY_QUALITY[dictationQuality],
+    whisperModel: WHISPER_MODEL,
     onFinalResult: handleFinalSpeech,
   });
 
@@ -333,7 +325,7 @@ export default function LocalPage() {
       {/* Content */}
       <div className="p-5 flex flex-1 gap-5 min-h-0">
         {/* Chat panel */}
-        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 shadow-none flex flex-col min-h-0">
+        <Card className="flex-1 basis-2/5 px-0 py-4 gap-4 shadow-none flex flex-col min-h-0 min-w-0">
           <div className="flex items-center justify-between w-full px-4 mb-2">
             <Button variant="outline" size="sm" onClick={handleNewChat}>
               <MessageCirclePlus className="h-4 w-4" />
@@ -356,7 +348,7 @@ export default function LocalPage() {
                       {isHuman ? t('local.user') : t('local.agent')}
                     </div>
                     {text ? (
-                      <div className={`rounded-lg px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-wrap ${isHuman ? 'bg-primary/10 text-foreground' : 'bg-muted text-foreground'}`}>
+                      <div className={`rounded-lg px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words ${isHuman ? 'bg-primary/10 text-foreground' : 'bg-muted text-foreground'}`}>
                         {text}
                       </div>
                     ) : (
@@ -418,7 +410,7 @@ export default function LocalPage() {
                         ? `${t('local.modelLoading')} (%${Math.round(modelProgress)})`
                         : isTranscribing
                           ? t('local.transcribing')
-                          : `${t('local.startDictation')} (${sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'})`
+                          : `${t('local.startDictation')} (Whisper)`
                 }
                 className={`absolute right-2 bottom-2 h-8 w-8 ${isListening ? 'animate-pulse' : ''}`}
               >
@@ -454,36 +446,6 @@ export default function LocalPage() {
                     EN
                   </button>
                 </div>
-
-                <div className="inline-flex rounded-md border bg-muted/40 p-0.5 text-[11px]">
-                  {(['fast', 'balanced', 'accurate'] as DictationQuality[]).map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => setDictationQuality(q)}
-                      disabled={isListening || isTranscribing || isModelLoading}
-                      title={
-                        q === 'fast'
-                          ? t('local.quality.fastTooltip')
-                          : q === 'balanced'
-                            ? t('local.quality.balancedTooltip')
-                            : t('local.quality.accurateTooltip')
-                      }
-                      className={`px-2 py-0.5 rounded-sm transition-colors disabled:opacity-40 ${
-                        dictationQuality === q
-                          ? 'bg-background shadow-sm font-medium'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                      aria-pressed={dictationQuality === q}
-                    >
-                      {q === 'fast'
-                        ? t('local.quality.fast')
-                        : q === 'balanced'
-                          ? t('local.quality.balanced')
-                          : t('local.quality.accurate')}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div className="flex-1 min-w-0 text-[11px] text-muted-foreground truncate">
@@ -499,23 +461,17 @@ export default function LocalPage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                     {t('local.transcribing')}
                   </span>
-                ) : isListening && interimTranscript ? (
-                  <span className="italic">{interimTranscript}</span>
                 ) : isListening ? (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
                     {t('local.listening')}
-                    <span className="text-muted-foreground/60">
-                      · {sttEngine === 'whisper' ? 'Whisper' : 'Web Speech'}
-                    </span>
+                    <span className="text-muted-foreground/60">· Whisper</span>
                   </span>
-                ) : engineNotice ? (
-                  <span className="text-muted-foreground/80">{engineNotice}</span>
                 ) : !isSTTSupported ? (
                   <span>{t('local.dictationNotSupported')}</span>
                 ) : (
                   <span className="text-muted-foreground/60">
-                    {sttEngine === 'whisper' ? t('local.whisperLocal') : 'Web Speech'} · {t('local.ready')}
+                    {t('local.whisperLocal')} · {t('local.ready')}
                   </span>
                 )}
               </div>
@@ -524,7 +480,7 @@ export default function LocalPage() {
         </Card>
 
         {/* Screenshot panel */}
-        <Card className="flex-1 basis-3/5 p-3 shadow-none flex flex-col min-h-0">
+        <Card className="flex-1 basis-3/5 p-3 shadow-none flex flex-col min-h-0 min-w-0">
           <div className="flex items-center justify-between mb-2 px-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{t('local.screenshots')}</span>

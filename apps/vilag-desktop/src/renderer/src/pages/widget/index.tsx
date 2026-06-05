@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Pause, Play, Square, Check, X } from 'lucide-react';
+import {
+  Pause,
+  Play,
+  Square,
+  Check,
+  X,
+  Circle,
+  Minus,
+  AlertTriangle,
+  BookOpen,
+} from 'lucide-react';
 import { Button } from '@renderer/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
 import { useI18n } from '@renderer/i18n';
@@ -29,6 +39,35 @@ interface RiskNotification {
   subtaskId: number;
   description: string;
   riskLevel: 'medium';
+}
+
+type SubtaskStatus = 'pending' | 'active' | 'done' | 'skipped' | 'error';
+
+interface PlanItem {
+  id: number;
+  instruction: string;
+  riskLevel: string;
+  status: SubtaskStatus;
+}
+
+interface RagMatch {
+  title: string;
+  steps: string[];
+}
+
+function statusIcon(status: SubtaskStatus) {
+  switch (status) {
+    case 'done':
+      return <Check className="h-3 w-3 text-primary" />;
+    case 'active':
+      return <span className="block h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />;
+    case 'skipped':
+      return <Minus className="h-3 w-3 text-muted-foreground/60" />;
+    case 'error':
+      return <AlertTriangle className="h-3 w-3 text-destructive" />;
+    default:
+      return <Circle className="h-2.5 w-2.5 text-muted-foreground/50" />;
+  }
 }
 
 function getMessageText(msg: any): string {
@@ -71,6 +110,8 @@ export default function WidgetPage() {
   const [lastMessage, setLastMessage] = useState<any | null>(null);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [riskNotification, setRiskNotification] = useState<RiskNotification | null>(null);
+  const [plan, setPlan] = useState<PlanItem[] | null>(null);
+  const [ragMatch, setRagMatch] = useState<RagMatch | null>(null);
 
   useEffect(() => {
     window.vilagAPI?.getState().then((state: any) => {
@@ -97,6 +138,13 @@ export default function WidgetPage() {
     window.vilagAPI?.onRiskNotification((request: RiskNotification) => {
       setRiskNotification(request);
       setTimeout(() => setRiskNotification(null), 4500);
+    });
+
+    window.vilagAPI?.onPlanUpdate((payload: { subtasks: PlanItem[] } | null) => {
+      setPlan(payload?.subtasks ?? null);
+    });
+    window.vilagAPI?.onRagMatch((match: RagMatch | null) => {
+      setRagMatch(match);
     });
   }, []);
 
@@ -154,6 +202,54 @@ export default function WidgetPage() {
           {getStatusLabel()}
         </span>
       </div>
+
+      {ragMatch && (
+        <div className="mb-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary">
+            <BookOpen className="h-3 w-3" />
+            {t('widget.ragReference')}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] font-semibold text-foreground">
+            {ragMatch.title}
+          </div>
+        </div>
+      )}
+
+      {plan && plan.length > 0 && (
+        <div className="mb-2 rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
+          <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/80">
+            {t('widget.plan')}
+          </div>
+          <ol className="flex flex-col gap-1">
+            {plan.map((item) => (
+              <li
+                key={item.id}
+                className={`flex items-start gap-1.5 text-[11px] leading-snug ${
+                  item.status === 'active'
+                    ? 'font-medium text-foreground'
+                    : item.status === 'done'
+                      ? 'text-muted-foreground line-through'
+                      : item.status === 'skipped'
+                        ? 'text-muted-foreground/60 line-through'
+                        : item.status === 'error'
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
+                }`}
+              >
+                <span className="mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center">
+                  {statusIcon(item.status)}
+                </span>
+                <span className="min-w-0 flex-1">{item.instruction}</span>
+                {item.riskLevel === 'high' && (
+                  <span className="shrink-0 rounded-full bg-destructive/15 px-1.5 py-[1px] text-[9px] font-medium text-destructive">
+                    {t('widget.risk')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {approval ? (
         <div className="mb-2 flex flex-col gap-2">

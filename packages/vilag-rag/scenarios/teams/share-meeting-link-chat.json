@@ -3,12 +3,10 @@
   "title": "Create Meeting Link and Share in Chat",
   "description": "Teams Meet ekranında toplantı linki oluşturup belirli bir kişiye sohbette gönderme akışı",
   "keywords": [
-    "meeting link", "meet link", "link", "invite link", "meeting invite",
+    "meeting link", "meet link", "link", "invite link",
     "create link", "generate link", "copy link", "create and copy link",
-    "meet", "meeting", "teams meet", "instant meeting",
-    "share", "send link", "forward link", "paste", "ctrl v",
-    "chat", "sohbet", "message", "send", "dm", "direct message",
-    "kişiye gönder", "chatte gönder", "sohbete gönder"
+    "send link", "forward link", "share link", "paste link",
+    "paste", "ctrl v"
   ],
   "steps": [
     { "order": 1, "action": "Click the Meet section in the left sidebar", "element": "Meet navigation item", "actionType": "click" },

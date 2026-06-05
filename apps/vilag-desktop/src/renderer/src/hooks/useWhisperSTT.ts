@@ -22,6 +22,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const DEFAULT_MODEL = 'Xenova/whisper-base';
 const TARGET_SAMPLE_RATE = 16000;
 
+// --- Sessizlik algılama (VAD) ayarları ---
+// Kullanıcı konuşmayı bırakıp bu kadar süre sessiz kalınca kayıt otomatik durur.
+const SILENCE_DURATION_MS = 1500;
+// RMS ses seviyesi bu eşiğin üstündeyse "konuşma" sayılır (0..1 arası).
+const SPEECH_THRESHOLD = 0.012;
+// Ses seviyesini ne sıklıkla ölçeceğimiz.
+const VAD_INTERVAL_MS = 100;
+// Hiç konuşma algılanmazsa güvenlik amaçlı otomatik kapanış süresi.
+const NO_SPEECH_TIMEOUT_MS = 8000;
+
 // Whisper dil kodları BCP-47 değil, İngilizce dil isimleridir.
 const LANG_MAP: Record<string, string> = {
   'tr-TR': 'turkish',
@@ -203,6 +213,9 @@ export function useWhisperSTT(
   const mimeRef = useRef<string>('');
   const onFinalResultRef = useRef(onFinalResult);
   const langRef = useRef(lang);
+  // Sessizlik algılama için Web Audio kaynakları.
+  const vadCtxRef = useRef<AudioContext | null>(null);
+  const vadTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     onFinalResultRef.current = onFinalResult;
@@ -220,6 +233,19 @@ export function useWhisperSTT(
     typeof (window as any).MediaRecorder !== 'undefined';
 
   const cleanupStream = useCallback(() => {
+    // Sessizlik algılamayı kapat.
+    if (vadTimerRef.current !== null) {
+      clearInterval(vadTimerRef.current);
+      vadTimerRef.current = null;
+    }
+    if (vadCtxRef.current) {
+      try {
+        void vadCtxRef.current.close();
+      } catch {
+        // noop
+      }
+      vadCtxRef.current = null;
+    }
     try {
       recorderRef.current?.stream?.getTracks().forEach((t) => t.stop());
     } catch {
@@ -329,6 +355,77 @@ export function useWhisperSTT(
       // Kayıt başlasın; periyodik chunk'lar da olsun.
       recorder.start(1000);
       setIsListening(true);
+
+      // --- Sessizlik algılama (VAD) ---
+      // Kullanıcı konuşmayı bırakıp kısa süre sessiz kalınca kaydı otomatik
+      // durdur; böylece mikrofonu ikinci kez kapatmaya gerek kalmaz. Kayıt
+      // durunca `recorder.onstop` transkripsiyonu tetikler ve metin kutuya düşer.
+      try {
+        const AudioCtx =
+          (window as any).AudioContext || (window as any).webkitAudioContext;
+        const vadCtx: AudioContext = new AudioCtx();
+        void vadCtx.resume?.();
+        const source = vadCtx.createMediaStreamSource(stream);
+        const analyser = vadCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const samples = new Float32Array(analyser.fftSize);
+        vadCtxRef.current = vadCtx;
+
+        let speechDetected = false;
+        let silenceStart = 0;
+        const startedAt = Date.now();
+
+        const triggerAutoStop = () => {
+          if (vadTimerRef.current !== null) {
+            clearInterval(vadTimerRef.current);
+            vadTimerRef.current = null;
+          }
+          const rec = recorderRef.current;
+          if (rec && rec.state === 'recording') {
+            try {
+              rec.stop();
+            } catch {
+              // noop
+            }
+          }
+        };
+
+        vadTimerRef.current = window.setInterval(() => {
+          analyser.getFloatTimeDomainData(samples);
+          let sum = 0;
+          for (let i = 0; i < samples.length; i++) {
+            sum += samples[i] * samples[i];
+          }
+          const rms = Math.sqrt(sum / samples.length);
+          const now = Date.now();
+
+          if (rms >= SPEECH_THRESHOLD) {
+            // Konuşma var: sessizlik sayacını sıfırla.
+            speechDetected = true;
+            silenceStart = 0;
+            return;
+          }
+
+          if (!speechDetected) {
+            // Henüz hiç konuşulmadı: kullanıcıya başlama süresi tanı,
+            // ama çok uzun süre sessiz kalınırsa güvenli kapanış yap.
+            if (now - startedAt > NO_SPEECH_TIMEOUT_MS) {
+              triggerAutoStop();
+            }
+            return;
+          }
+
+          // Konuşma başlamıştı ve şu an sessiz: sessizlik süresini ölç.
+          if (silenceStart === 0) {
+            silenceStart = now;
+          } else if (now - silenceStart >= SILENCE_DURATION_MS) {
+            triggerAutoStop();
+          }
+        }, VAD_INTERVAL_MS);
+      } catch {
+        // VAD kurulamazsa sorun değil; kullanıcı mikrofonu manuel kapatabilir.
+      }
     } catch (e: any) {
       const msg = e?.message || 'Failed to access microphone';
       setError(msg);
